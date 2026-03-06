@@ -1556,11 +1556,18 @@
             document.getElementById('bossFab').style.display = 'flex';
             document.getElementById('bossMonthLabel').textContent = bossSelectedMonths.join(', ');
 
+            // Show loading placeholder in coaches tab
+            const coachesList = document.getElementById('bossCoachesList');
+            if (coachesList) coachesList.innerHTML = '<p style="color:#aaa;text-align:center;padding:30px">載入中…</p>';
+
             // Load all coaches
             db.collection('users').where('role', '==', 'coach').get().then(snap => {
                 allCoaches = snap.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
                 populateCoachSelect();
                 updateBossUI();
+            }).catch(err => {
+                allCoaches = [];
+                if (coachesList) coachesList.innerHTML = `<p style="color:#aaa;text-align:center;padding:30px">無法載入教練列表<br><small>${esc(err.message)}</small></p>`;
             });
 
             // Listen to schedules created by this boss
@@ -1770,33 +1777,39 @@
         // ===== BOSS COACHES TAB =====
 
         function renderBossCoaches() {
-            const now = new Date();
-            const monthStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+            const el = document.getElementById('bossCoachesList');
+            if (!el) return;
+            try {
+                const now = new Date();
+                const monthStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
 
-            const html = allCoaches.length === 0
-                ? '<p style="color:#aaa;text-align:center;padding:30px">暫無教練。<br>請在 Firebase Console 將教練帳號的 role 設為 "coach"。</p>'
-                : allCoaches.map(coach => {
-                    const coachLogs = bossLogs.filter(l =>
-                        l.uid === coach.uid &&
-                        (l.date || '').startsWith(monthStr)
-                    );
-                    const totalHours = coachLogs.reduce((sum, l) => sum + parseFloat(l.hours || 0), 0);
-                    const avatarUrl = coach.photoURL ? esc(coach.photoURL) : '';
-                    return `
-                        <div class="card">
-                            <div style="display:flex;align-items:center;gap:12px">
-                                ${avatarUrl ? `<img src="${avatarUrl}" style="width:40px;height:40px;border-radius:50%;object-fit:cover">` : '<div style="width:40px;height:40px;border-radius:50%;background:#eee;display:flex;align-items:center;justify-content:center;font-size:18px">👤</div>'}
-                                <div style="flex:1">
-                                    <div style="font-weight:700">${esc(coach.name || coach.email || '未知教練')}</div>
-                                    <div style="font-size:0.85em;color:#888">${esc(coach.email || '')}</div>
+                const html = allCoaches.length === 0
+                    ? '<p style="color:#aaa;text-align:center;padding:30px">暫無教練。<br>請在 Firebase Console 將教練帳號的 role 設為 "coach"。</p>'
+                    : allCoaches.map(coach => {
+                        const coachLogs = bossLogs.filter(l =>
+                            l.uid === coach.uid &&
+                            (l.date || '').startsWith(monthStr)
+                        );
+                        const totalHours = coachLogs.reduce((sum, l) => sum + parseFloat(l.hours || 0), 0);
+                        const avatarUrl = coach.photoURL ? esc(coach.photoURL) : '';
+                        return `
+                            <div class="card">
+                                <div style="display:flex;align-items:center;gap:12px">
+                                    ${avatarUrl ? `<img src="${avatarUrl}" style="width:40px;height:40px;border-radius:50%;object-fit:cover">` : '<div style="width:40px;height:40px;border-radius:50%;background:#eee;display:flex;align-items:center;justify-content:center;font-size:18px">👤</div>'}
+                                    <div style="flex:1">
+                                        <div style="font-weight:700">${esc(coach.name || coach.email || '未知教練')}</div>
+                                        <div style="font-size:0.85em;color:#888">${esc(coach.email || '')}</div>
+                                    </div>
+                                    <div style="font-size:1.3em;font-weight:800;color:var(--primary)">${totalHours.toFixed(1)}h</div>
                                 </div>
-                                <div style="font-size:1.3em;font-weight:800;color:var(--primary)">${totalHours.toFixed(1)}h</div>
-                            </div>
-                            <div style="font-size:0.8em;color:#aaa;margin-top:8px">本月工時（${esc(monthStr)}）</div>
-                        </div>`;
-                }).join('');
+                                <div style="font-size:0.8em;color:#aaa;margin-top:8px">本月工時（${esc(monthStr)}）</div>
+                            </div>`;
+                    }).join('');
 
-            document.getElementById('bossCoachesList').innerHTML = html;
+                el.innerHTML = html;
+            } catch(err) {
+                el.innerHTML = `<p style="color:#aaa;text-align:center;padding:30px">顯示錯誤: ${esc(err.message)}</p>`;
+            }
         }
 
         // ===== BOSS REPORT TAB =====
