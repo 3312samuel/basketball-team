@@ -310,6 +310,43 @@
             .print-table td { border-bottom: 1px solid #eee; padding: 6px 4px; }
             .print-total { margin-top: 20px; text-align: right; font-weight: bold; font-size: 16px; }
         }
+
+        /* Loading Overlay */
+        #loadingOverlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--light); display: flex; align-items: center; justify-content: center;
+            z-index: 2500;
+        }
+        .spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.7s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Toast */
+        .toast { position: fixed; bottom: calc(90px + var(--safe-bottom)); left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 12px 20px; border-radius: 20px; font-size: 0.9em; font-weight: 600; z-index: 3000; pointer-events: none; animation: fadeIn 0.2s ease-out; white-space: nowrap; }
+
+        /* Inline validation */
+        input.field-error { border-color: #ff4444 !important; background: #fff5f5 !important; }
+
+        /* Dark Mode */
+        @media (prefers-color-scheme: dark) {
+            :root { --light: #1a1a1a; --border: #3a3a3a; --dark: #f0f0f0; }
+            body { background: #1a1a1a; color: #f0f0f0; }
+            .card, .modal-card, .login-card { background: #2c2c2c; }
+            .bottom-nav { background: #2c2c2c; border-top-color: #3a3a3a; }
+            input, select { background: #333; color: #f0f0f0; border-color: #444; }
+            select option { background: #333; }
+            .record-card { background: #2c2c2c; box-shadow: none; border: 1px solid #3a3a3a; }
+            .timeline-content { background: #2c2c2c; border-color: #3a3a3a; }
+            .view-toggle { background: #333; }
+            .toggle-btn.active { background: #2c2c2c; }
+            .course-filters { background: #2c2c2c; border-color: #3a3a3a; }
+            .filter-chip { background: #333; color: #ccc; }
+            .month-selector { background: #2c2c2c; border-color: #3a3a3a; }
+            .btn-action { background: #2c2c2c; color: #ccc; border-color: #444; }
+            .btn-secondary { background: #333; color: #ccc; }
+            .checkbox-wrapper { background: #333; border-color: #444; }
+            input.field-error { background: #3a1a1a !important; }
+            #loadingOverlay { background: #1a1a1a; }
+        }
     </style>
 </head>
 <body>
@@ -396,6 +433,7 @@
         <div class="tools-area" style="text-align:center; margin-top:30px;">
             <button class="btn-action" onclick="startPrint()"><svg class="icon-sm" viewBox="0 0 24 24"><path d="M19 8h-1V3H6v5H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zM8 5h8v3H8V5zm8 12v2H8v-2h8zm2-2v-2H6v2H4v-4c0-.55.45-1 1-1h14c.55 0 1 .45 1 1v4h-2z"/></svg> 列印</button>
             <button class="btn-action" onclick="exportData()"><svg class="icon-sm" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg> 備份</button>
+            <button class="btn-action" onclick="exportCSV()"><svg class="icon-sm" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg> CSV</button>
             <button class="btn-action" onclick="document.getElementById('importFile').click()"><svg class="icon-sm" viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg> 還原</button>
         </div>
     </div>
@@ -459,6 +497,8 @@
     </div>
     </div> <!-- End of #app-content -->
     
+    <div id="loadingOverlay" style="display:none"><div class="spinner"></div></div>
+
     <input type="file" id="importFile" style="display: none" onchange="importData(this)">
     <datalist id="bossList"></datalist> <datalist id="courseList"></datalist> <datalist id="locationList"></datalist>
 
@@ -702,19 +742,24 @@
             if (unsubscribeSchedule) { unsubscribeSchedule(); unsubscribeSchedule = null; }
 
             document.getElementById('app-content').style.display = 'block';
-            // boss-content won't exist yet in Task 1, so guard it
             const bossEl = document.getElementById('boss-content');
             if (bossEl) bossEl.style.display = 'none';
+            showLoading();
+
+            let initialLoaded = false;
+            const checkFirstLoad = () => { if (!initialLoaded) { initialLoaded = true; hideLoading(); } };
 
             unsubscribeLogs = db.collection('logs').where('uid', '==', currentUser.uid)
                 .onSnapshot(snapshot => {
                     logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    checkFirstLoad();
                     updateUI();
                 });
 
             unsubscribeSchedule = db.collection('schedule').where('assignedToUid', '==', currentUser.uid)
                 .onSnapshot(snapshot => {
                     schedule = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    checkFirstLoad();
                     updateUI();
                 });
 
@@ -777,13 +822,16 @@
             }, 500);
         }
 
+        let _monthPickerCallback = null;
+
         function openMonthPicker() {
-            document.getElementById('monthPickerModal').style.display = 'flex';
+            _monthPickerCallback = (months) => { selectedMonths = months; renderLogList(); };
             pickerYear = parseInt(selectedMonths[0]?.split('-')[0] || new Date().getFullYear());
             tempSelectedMonths = new Set(selectedMonths);
+            document.getElementById('monthPickerModal').style.display = 'flex';
             renderPickerGrid();
         }
-        function closeMonthPicker() { document.getElementById('monthPickerModal').style.display = 'none'; }
+        function closeMonthPicker() { document.getElementById('monthPickerModal').style.display = 'none'; _monthPickerCallback = null; }
         function changePickerYear(n) { pickerYear += n; renderPickerGrid(); }
 
         function renderPickerGrid() {
@@ -805,9 +853,10 @@
 
         function applyMonthSelection() {
             if(tempSelectedMonths.size === 0) { alert('請至少選擇一個月份'); return; }
-            selectedMonths = Array.from(tempSelectedMonths).sort();
+            const months = Array.from(tempSelectedMonths).sort();
+            const cb = _monthPickerCallback;
             closeMonthPicker();
-            renderLogList();
+            if (cb) cb(months);
         }
 
         function renderLogList() {
@@ -873,29 +922,33 @@
                 return; 
             }
 
+            const parts = [];
             filteredLogs.forEach(e => {
                 let h = parseFloat(e.hours); total += h;
                 let c = e.course || '未分類';
-                if(e.isSub) c += " (代課)"; 
+                if(e.isSub) c += " (代課)";
                 bMap[c] = (bMap[c]||0)+h;
 
                 const subClass = e.isSub ? 'is-sub' : '';
                 const subTag = e.isSub ? '<span class="sub-tag">代課</span>' : '';
-                const locationTxt = e.location ? `<span class="record-tag">📍 ${e.location}</span>` : '';
+                const locationTxt = e.location ? `<span class="record-tag">📍 ${esc(e.location)}</span>` : '';
 
-                container.innerHTML += `
+                parts.push(`
                     <div class="record-card ${subClass}">
                         <div class="record-info">
-                            <div class="record-meta">${e.date}</div>
-                            <div class="record-title">${e.boss} ${subTag} ${e.course?`<span class="record-tag">${e.course}</span>`:''} ${locationTxt}</div>
-                            <div class="record-meta">${e.start}-${e.end} ${e.note||''}</div>
+                            <div class="record-meta">${esc(e.date)}</div>
+                            <div class="record-title">${esc(e.boss)} ${subTag} ${e.course?`<span class="record-tag">${esc(e.course)}</span>`:''} ${locationTxt}</div>
+                            <div class="record-meta">${esc(e.start)}-${esc(e.end)} ${esc(e.note||'')}</div>
                         </div>
-                        <div class="hours-badge">${e.hours}</div>
-                        <button class="delete-btn" onclick="deleteLog(${e.id})"><svg class="icon" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>
-                    </div>`;
+                        <div class="hours-badge">${esc(e.hours)}</div>
+                        <button class="delete-btn" onclick="deleteLog('${e.id}')"><svg class="icon" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>
+                    </div>`);
             });
+            container.innerHTML = parts.join('');
             document.getElementById('totalHours').innerText = total.toFixed(2);
-            Object.keys(bMap).forEach(k => breakdown.innerHTML += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>${k}</span><span>${bMap[k].toFixed(2)}</span></div>`);
+            const bdParts = [];
+            Object.keys(bMap).forEach(k => bdParts.push(`<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>${esc(k)}</span><span>${bMap[k].toFixed(2)}</span></div>`));
+            breakdown.innerHTML = bdParts.join('');
             
             renderPrintView(filteredLogs);
         }
@@ -1009,27 +1062,42 @@
             const grid = document.getElementById('calendarGrid');
             const title = document.getElementById('calMonthTitle');
             const filter = document.getElementById('filterBoss').value;
-            grid.innerHTML = '';
-            
+
             const year = currentCalDate.getFullYear(), month = currentCalDate.getMonth();
             title.innerHTML = `${year}年 ${month + 1}月 <button class="today-btn-small" onclick="goToToday()">今天</button>`;
-            
-            ['日','一','二','三','四','五','六'].forEach(d => grid.innerHTML += `<div class="cal-day-name">${d}</div>`);
-            
+
+            // Pre-build date/day index maps for O(1) lookup per cell
+            const logDateMap = {}, schDateMap = {}, schDayMap = {};
+            logs.filter(l => filter === 'all' || l.boss === filter).forEach(l => {
+                if (!logDateMap[l.date]) logDateMap[l.date] = [];
+                logDateMap[l.date].push(l);
+            });
+            schedule.filter(s => filter === 'all' || s.boss === filter).forEach(s => {
+                if (s.date) {
+                    if (!schDateMap[s.date]) schDateMap[s.date] = [];
+                    schDateMap[s.date].push(s);
+                } else {
+                    const day = s.day;
+                    if (!schDayMap[day]) schDayMap[day] = [];
+                    schDayMap[day].push(s);
+                }
+            });
+
+            const dayNames = ['日','一','二','三','四','五','六'];
+            let gridHtml = dayNames.map(d => `<div class="cal-day-name">${d}</div>`).join('');
+
             const firstDay = new Date(year, month, 1).getDay();
             const daysInMonth = new Date(year, month + 1, 0).getDate();
-            for(let i=0;i<firstDay;i++) grid.innerHTML+='<div></div>';
+            for(let i=0;i<firstDay;i++) gridHtml+='<div></div>';
 
             for(let d=1; d<=daysInMonth; d++){
                 const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
                 const dayOfWeek = new Date(dateStr).getDay();
-                
-                // Get all events for this day
-                const dayLogs = logs.filter(l => l.date === dateStr && (filter==='all'||l.boss===filter));
-                // Recurring Schedule
-                const recurringSch = schedule.filter(s => s.day==dayOfWeek && !s.date && (filter==='all'||s.boss===filter));
-                // One-off Schedule
-                const oneOffSch = schedule.filter(s => s.date === dateStr && (filter==='all'||s.boss===filter));
+
+                // Get all events for this day using pre-built maps
+                const dayLogs = logDateMap[dateStr] || [];
+                const recurringSch = schDayMap[dayOfWeek] || [];
+                const oneOffSch = schDateMap[dateStr] || [];
                 
                 // Determine dots to show
                 let dotHtml = '<div class="dots-container">';
@@ -1065,13 +1133,15 @@
                 }
                 dotHtml += '</div>';
                 
-                const cell = document.createElement('div');
-                cell.className = `cal-cell ${isToday?'today':''} ${isSel?'selected':''}`;
-                cell.onclick = () => { selectedDate = dateStr; renderCalendar(); renderSelectedDateInfo(); };
-                
-                cell.innerHTML = `<span>${d}</span>${dotHtml}`;
-                grid.appendChild(cell);
+                gridHtml += `<div class="cal-cell ${isToday?'today':''} ${isSel?'selected':''}" onclick="selectCalDate('${dateStr}')"><span>${d}</span>${dotHtml}</div>`;
             }
+            grid.innerHTML = gridHtml;
+            renderSelectedDateInfo();
+        }
+
+        function selectCalDate(dateStr) {
+            selectedDate = dateStr;
+            renderCalendar();
             renderSelectedDateInfo();
         }
 
@@ -1122,26 +1192,26 @@
                 const isLog = e.type === 'log';
                 const isSub = e.isSub;
                 const dotClass = isLog ? (isSub ? 'sub' : '') : 'future';
-                const loc = e.location ? `<span style="font-size:0.85em; color:#999; margin-left:6px;">📍 ${e.location}</span>` : '';
+                const loc = e.location ? `<span style="font-size:0.85em; color:#999; margin-left:6px;">📍 ${esc(e.location)}</span>` : '';
                 const oneOffBadge = e.isOneOff ? '<span class="record-tag" style="background:#fff3e0; color:#ff9800;">單次</span>' : '';
-                
+
                 html += `
                 <div class="timeline-item">
                     <div class="timeline-dot ${dotClass}"></div>
-                    <div class="timeline-time">${e.start} - ${e.end}</div>
+                    <div class="timeline-time">${esc(e.start)} - ${esc(e.end)}</div>
                     <div class="timeline-content">
                         <div style="font-weight:700; color:var(--dark); display:flex; justify-content:space-between;">
-                            <span>${e.boss} ${isSub?'<span class="sub-tag">代</span>':''} ${oneOffBadge}</span>
-                            ${isLog ? `<span style="color:var(--primary); font-size:0.9em;">${e.hours}h</span>` : ''}
+                            <span>${esc(e.boss)} ${isSub?'<span class="sub-tag">代</span>':''} ${oneOffBadge}</span>
+                            ${isLog ? `<span style="color:var(--primary); font-size:0.9em;">${esc(e.hours)}h</span>` : ''}
                         </div>
                         <div style="font-size:0.9em; color:#666; margin-top:4px;">
-                            ${e.course||''} ${loc}
+                            ${esc(e.course||'')} ${loc}
                         </div>
                         ${!isLog ? `<div style="margin-top:8px;">
                             <button class="btn-action" style="background:var(--primary); color:white; border:none; padding:4px 12px;" onclick="checkInFromCal('${e.id}', '${selectedDate}')">補打卡</button>
                             ${e.isOneOff ? `<button class="delete-btn" style="float:right; color:#ccc;" onclick="deleteSchedule('${e.id}')"><svg class="icon" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>` : ''}
                         </div>` : ''}
-                        ${isLog ? `<div style="text-align:right; margin-top:-20px;"><button class="delete-btn" onclick="deleteLog(${e.id})"><svg class="icon" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button></div>` : ''}
+                        ${isLog ? `<div style="text-align:right; margin-top:-20px;"><button class="delete-btn" onclick="deleteLog('${e.id}')"><svg class="icon" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button></div>` : ''}
                     </div>
                 </div>`;
             });
@@ -1186,8 +1256,14 @@
         async function saveOneOffEntry() {
             if(!currentUser) return;
             const s=document.getElementById('moStart').value, e=document.getElementById('moEnd').value, b=document.getElementById('moBoss').value, c=document.getElementById('moCourse').value, l=document.getElementById('moLocation').value;
-            if(!b||!s||!e){alert('資料不完整');return;}
-            
+            let _valid = true;
+            [['moStart',s],['moEnd',e],['moBoss',b]].forEach(([id,val]) => {
+                const el = document.getElementById(id);
+                if (!val) { el.classList.add('field-error'); _valid = false; }
+                else el.classList.remove('field-error');
+            });
+            if(!_valid) return;
+
             const newId = Date.now().toString();
             const _bossList = document.getElementById('bossList');
             const _bossOption = _bossList ? Array.from(_bossList.options).find(o => o.value === b) : null;
@@ -1215,22 +1291,24 @@
             const recurring = schedule.filter(s => !s.date && (filter==='all'||s.boss===filter));
             
             const dayMap = {1:'週一', 2:'週二', 3:'週三', 4:'週四', 5:'週五', 6:'週六', 0:'週日'};
+            const ttParts = [];
             [1,2,3,4,5,6,0].forEach(d => {
                 const list = recurring.filter(s => s.day==d).sort((a,b)=>a.start.localeCompare(b.start));
                 if(list.length > 0) {
-                    container.innerHTML += `<div style="margin-top:20px;font-weight:700;color:#ccc;font-size:0.9em;margin-bottom:8px;">${dayMap[d]}</div>`;
+                    ttParts.push(`<div style="margin-top:20px;font-weight:700;color:#ccc;font-size:0.9em;margin-bottom:8px;">${dayMap[d]}</div>`);
                     list.forEach(c => {
-                        const loc = c.location ? `<span style="font-size:0.85em; color:#999;"> @ ${c.location}</span>` : '';
-                        container.innerHTML += `<div class="record-card" style="border-left-color:#ccc; padding:12px;">
-                            <div class="record-info"><div class="record-title" style="font-size:1em;">${c.boss} <span class="record-tag">${c.course||''}</span></div><div class="record-meta">${c.start}-${c.end} ${loc}</div></div>
+                        const loc = c.location ? `<span style="font-size:0.85em; color:#999;"> @ ${esc(c.location)}</span>` : '';
+                        ttParts.push(`<div class="record-card" style="border-left-color:#ccc; padding:12px;">
+                            <div class="record-info"><div class="record-title" style="font-size:1em;">${esc(c.boss)} <span class="record-tag">${esc(c.course||'')}</span></div><div class="record-meta">${esc(c.start)}-${esc(c.end)} ${loc}</div></div>
                             <div style="display:flex;">
-                                <button class="btn-action" style="padding:4px;" onclick="editSchedule(${c.id})"><svg class="icon" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
-                                <button class="delete-btn" onclick="deleteSchedule(${c.id})"><svg class="icon" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>
+                                <button class="btn-action" style="padding:4px;" onclick="editSchedule('${c.id}')"><svg class="icon" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+                                <button class="delete-btn" onclick="deleteSchedule('${c.id}')"><svg class="icon" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>
                             </div>
-                        </div>`;
+                        </div>`);
                     });
                 }
             });
+            container.innerHTML = ttParts.join('');
         }
 
         async function checkInFromCal(id, date) {
@@ -1261,7 +1339,13 @@
             if(!currentUser) return;
             const d=document.getElementById('dateInput').value, b=document.getElementById('bossInput').value, c=document.getElementById('courseInput').value, loc=document.getElementById('locationInput').value, s=document.getElementById('startTime').value, e=document.getElementById('endTime').value;
             const isSub = document.getElementById('isSubInput').checked;
-            if(!d||!b||!s||!e){alert('資料不完整');return;}
+            let valid = true;
+            [['dateInput',d],['bossInput',b],['startTime',s],['endTime',e]].forEach(([id,val]) => {
+                const el = document.getElementById(id);
+                if (!val) { el.classList.add('field-error'); valid = false; }
+                else el.classList.remove('field-error');
+            });
+            if(!valid) return;
             
             const newId = Date.now().toString(); // 使用時間戳作為文檔 ID
 
@@ -1281,14 +1365,21 @@
 
             try {
                 await db.collection("logs").doc(newId).set(data);
-                document.getElementById('isSubInput').checked = false; 
+                document.getElementById('isSubInput').checked = false;
+                showToast(`已成功記錄 ${data.hours} 小時`);
                 switchTab('list'); // 儲存後自動跳轉
             } catch (err) { alert("同步失敗: " + err); }
         }
         async function addTimetableEntry() {
             if(!currentUser) return;
             const d=document.getElementById('ttDay').value, s=document.getElementById('ttStart').value, e=document.getElementById('ttEnd').value, b=document.getElementById('ttBoss').value, loc=document.getElementById('ttLocation').value;
-            if(!b||!s||!e){alert('資料不完整');return;}
+            let valid = true;
+            [['ttStart',s],['ttEnd',e],['ttBoss',b]].forEach(([id,val]) => {
+                const el = document.getElementById(id);
+                if (!val) { el.classList.add('field-error'); valid = false; }
+                else el.classList.remove('field-error');
+            });
+            if(!valid) return;
             
             const data = {
                 uid: currentUser.uid, // 加入使用者 ID
@@ -1310,7 +1401,7 @@
         }
 
         function editSchedule(id) {
-            const item = schedule.find(s => s.id === id);
+            const item = schedule.find(s => s.id == id);
             if(!item) return;
             currentEditingId = id;
             
@@ -1354,9 +1445,28 @@
             }
         }
 
-        function saveLogs() {} // Dummy
-        function saveSchedule() {} // Dummy
+        function saveLogs() {} // Dummy (legacy)
+        function saveSchedule() {} // Dummy (legacy)
         function calculateHours(s,e){let diff=(new Date(`2000/01/01 ${e}`)-new Date(`2000/01/01 ${s}`))/36e5; return (diff<0?diff+24:diff).toFixed(2);}
+
+        // Escape HTML entities to prevent XSS
+        function esc(str) {
+            return String(str == null ? '' : str)
+                .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+        }
+
+        function showToast(msg) {
+            const t = document.createElement('div');
+            t.className = 'toast';
+            t.textContent = msg;
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 2500);
+        }
+
+        function showLoading() { document.getElementById('loadingOverlay').style.display = 'flex'; }
+        function hideLoading() { document.getElementById('loadingOverlay').style.display = 'none'; }
+
         function updateLists(){
             const bosses=[...new Set(logs.map(x=>x.boss))], courses=[...new Set(logs.map(x=>x.course).filter(x=>x))];
             const locations=[...new Set(logs.map(x=>x.location).filter(x=>x))];
@@ -1365,15 +1475,59 @@
             // Preserve Firebase-loaded boss options (those with data-uid) when rebuilding bossList
             const _bossListEl = document.getElementById('bossList');
             const _uidOpts = _bossListEl ? Array.from(_bossListEl.options).filter(o => o.getAttribute('data-uid')) : [];
-            if (_bossListEl) _bossListEl.innerHTML = _uidOpts.map(o => `<option data-uid="${o.getAttribute('data-uid')}" value="${o.value}">`).join('');
+            if (_bossListEl) _bossListEl.innerHTML = _uidOpts.map(o => `<option data-uid="${esc(o.getAttribute('data-uid'))}" value="${esc(o.value)}">`).join('');
             document.getElementById('courseList').innerHTML=''; document.getElementById('locationList').innerHTML='';
-            bosses.forEach(b=>{sel.innerHTML+=`<option value="${b}">${b}</option>`;if(_bossListEl && !_uidOpts.some(o=>o.value===b)) _bossListEl.innerHTML+=`<option value="${b}">`;});
-            courses.forEach(c=>document.getElementById('courseList').innerHTML+=`<option value="${c}">`);
-            locations.forEach(l=>document.getElementById('locationList').innerHTML+=`<option value="${l}">`);
+            bosses.forEach(b=>{sel.innerHTML+=`<option value="${esc(b)}">${esc(b)}</option>`;if(_bossListEl && !_uidOpts.some(o=>o.value===b)) _bossListEl.innerHTML+=`<option value="${esc(b)}">`;});
+            courses.forEach(c=>document.getElementById('courseList').innerHTML+=`<option value="${esc(c)}">`);
+            locations.forEach(l=>document.getElementById('locationList').innerHTML+=`<option value="${esc(l)}">`);
             if(bosses.includes(cur))sel.value=cur;
         }
         function exportData(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({logs,schedule})]));a.download=`backup.json`;document.body.appendChild(a);a.click();a.remove();}
-        function importData(i){const r=new FileReader();r.onload=e=>{try{const d=JSON.parse(e.target.result);if(d.logs)logs=[...logs,...d.logs];if(d.schedule)schedule=[...schedule,...d.schedule];saveLogs();saveSchedule();alert('OK');}catch{alert('Error');}};r.readAsText(i.files[0]);}
+        function exportCSV() {
+            const header = ['日期','付款人','課程','地點','開始','結束','時數','代課','備註'];
+            const rows = logs
+                .filter(l => selectedMonths.some(m => (l.date||'').startsWith(m)))
+                .sort((a,b) => (a.date||'').localeCompare(b.date||''))
+                .map(l => [l.date,l.boss,l.course||'',l.location||'',l.start,l.end,l.hours,l.isSub?'是':'否',l.note||'']
+                    .map(v => `"${String(v==null?'':v).replace(/"/g,'""')}"`).join(','));
+            const csv = [header.join(','), ...rows].join('\n');
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'}));
+            a.download = `教練記錄_${selectedMonths.join('_')}.csv`;
+            document.body.appendChild(a); a.click(); a.remove();
+        }
+        async function importData(i) {
+            if(!currentUser) return;
+            const r = new FileReader();
+            r.onload = async e => {
+                try {
+                    const d = JSON.parse(e.target.result);
+                    let count = 0;
+                    const batch = db.batch();
+                    if (d.logs && Array.isArray(d.logs)) {
+                        d.logs.forEach(log => {
+                            const { id, ...data } = log;
+                            data.uid = currentUser.uid;
+                            const ref = db.collection('logs').doc(id || Date.now().toString() + count);
+                            batch.set(ref, data, { merge: true });
+                            count++;
+                        });
+                    }
+                    if (d.schedule && Array.isArray(d.schedule)) {
+                        d.schedule.forEach(sch => {
+                            const { id, ...data } = sch;
+                            data.uid = currentUser.uid;
+                            const ref = db.collection('schedule').doc(id || Date.now().toString() + count);
+                            batch.set(ref, data, { merge: true });
+                            count++;
+                        });
+                    }
+                    await batch.commit();
+                    showToast(`已成功匯入 ${count} 筆資料`);
+                } catch(err) { alert('匯入失敗: ' + err); }
+            };
+            r.readAsText(i.files[0]);
+        }
 
         // ===== BOSS VIEW JS =====
 
@@ -1508,13 +1662,13 @@
                 : daySchedules.map(s => `
                     <div class="record-card" style="cursor:pointer" onclick="openBossScheduleModal('${s.id}')">
                         <div class="record-info">
-                            <div class="record-title">${s.course || '未命名'}</div>
-                            <div class="record-meta">${s.start}–${s.end} &nbsp;|&nbsp; ${s.location || ''} &nbsp;|&nbsp; <strong>${coachName(s.assignedToUid)}</strong>${s.isOneOff ? '' : ' <span class="record-tag">週期</span>'}</div>
+                            <div class="record-title">${esc(s.course || '未命名')}</div>
+                            <div class="record-meta">${esc(s.start)}–${esc(s.end)} &nbsp;|&nbsp; ${esc(s.location || '')} &nbsp;|&nbsp; <strong>${esc(coachName(s.assignedToUid))}</strong>${s.isOneOff ? '' : ' <span class="record-tag">週期</span>'}</div>
                         </div>
                         <button class="delete-btn" onclick="event.stopPropagation();deleteBossSchedule('${s.id}')">✕</button>
                     </div>`).join('');
 
-            document.getElementById('bossCalDetail').innerHTML = `<div style="font-weight:700;margin-bottom:10px">${dateStr} 的課程</div>${items}`;
+            document.getElementById('bossCalDetail').innerHTML = `<div style="font-weight:700;margin-bottom:10px">${esc(dateStr)} 的課程</div>${items}`;
         }
 
         // ===== BOSS SCHEDULE MODAL =====
@@ -1627,17 +1781,18 @@
                         (l.date || '').startsWith(monthStr)
                     );
                     const totalHours = coachLogs.reduce((sum, l) => sum + (l.hours || 0), 0);
+                    const avatarUrl = coach.photoURL ? esc(coach.photoURL) : '';
                     return `
                         <div class="card">
                             <div style="display:flex;align-items:center;gap:12px">
-                                ${coach.photoURL ? `<img src="${coach.photoURL}" style="width:40px;height:40px;border-radius:50%;object-fit:cover">` : '<div style="width:40px;height:40px;border-radius:50%;background:#eee;display:flex;align-items:center;justify-content:center;font-size:18px">👤</div>'}
+                                ${avatarUrl ? `<img src="${avatarUrl}" style="width:40px;height:40px;border-radius:50%;object-fit:cover">` : '<div style="width:40px;height:40px;border-radius:50%;background:#eee;display:flex;align-items:center;justify-content:center;font-size:18px">👤</div>'}
                                 <div style="flex:1">
-                                    <div style="font-weight:700">${coach.name || coach.email || '未知教練'}</div>
-                                    <div style="font-size:0.85em;color:#888">${coach.email || ''}</div>
+                                    <div style="font-weight:700">${esc(coach.name || coach.email || '未知教練')}</div>
+                                    <div style="font-size:0.85em;color:#888">${esc(coach.email || '')}</div>
                                 </div>
                                 <div style="font-size:1.3em;font-weight:800;color:var(--primary)">${totalHours.toFixed(1)}h</div>
                             </div>
-                            <div style="font-size:0.8em;color:#aaa;margin-top:8px">本月工時（${monthStr}）</div>
+                            <div style="font-size:0.8em;color:#aaa;margin-top:8px">本月工時（${esc(monthStr)}）</div>
                         </div>`;
                 }).join('');
 
@@ -1647,29 +1802,15 @@
         // ===== BOSS REPORT TAB =====
 
         function openBossMonthPicker() {
-            document.getElementById('monthPickerModal').style.display = 'flex';
+            _monthPickerCallback = (months) => {
+                bossSelectedMonths = months;
+                document.getElementById('bossMonthLabel').textContent = months.join(', ');
+                renderBossReport();
+            };
             pickerYear = parseInt(bossSelectedMonths[0]?.split('-')[0] || new Date().getFullYear());
             tempSelectedMonths = new Set(bossSelectedMonths);
+            document.getElementById('monthPickerModal').style.display = 'flex';
             renderPickerGrid();
-            // Override confirm button; cancel button will restore via closeMonthPicker override
-            const confirmBtn = document.querySelector('#monthPickerModal .btn-primary');
-            confirmBtn.onclick = applyBossMonthSelection;
-            // Also wrap closeMonthPicker to restore handler on cancel
-            const _origClose = closeMonthPicker;
-            window._bossPickerCloseOnce = function() {
-                confirmBtn.onclick = applyMonthSelection;
-                closeMonthPicker = _origClose;
-                _origClose();
-            };
-            closeMonthPicker = window._bossPickerCloseOnce;
-        }
-
-        function applyBossMonthSelection() {
-            if (tempSelectedMonths.size === 0) { alert('請至少選擇一個月份'); return; }
-            bossSelectedMonths = Array.from(tempSelectedMonths).sort();
-            document.getElementById('bossMonthLabel').textContent = bossSelectedMonths.join(', ');
-            closeMonthPicker(); // wrapper restores confirm button and itself
-            renderBossReport();
         }
 
         function renderBossReport() {
@@ -1705,7 +1846,7 @@
 
                 const courseRows = Object.entries(byCourse)
                     .sort((a,b) => b[1]-a[1])
-                    .map(([c, h]) => `<div style="display:flex;justify-content:space-between;padding:3px 0"><span>${c || '未命名'}</span><span style="font-weight:600">${h.toFixed(1)}h</span></div>`)
+                    .map(([c, h]) => `<div style="display:flex;justify-content:space-between;padding:3px 0"><span>${esc(c || '未命名')}</span><span style="font-weight:600">${h.toFixed(1)}h</span></div>`)
                     .join('');
 
                 const logRows = coachLogs
@@ -1713,15 +1854,15 @@
                     .map(l => `
                         <div class="record-card">
                             <div class="record-info">
-                                <div class="record-title">${l.course || '未命名'}</div>
-                                <div class="record-meta">${l.date || ''} &nbsp; ${l.start || ''}–${l.end || ''} &nbsp; ${l.location || ''}</div>
+                                <div class="record-title">${esc(l.course || '未命名')}</div>
+                                <div class="record-meta">${esc(l.date || '')} &nbsp; ${esc(l.start || '')}–${esc(l.end || '')} &nbsp; ${esc(l.location || '')}</div>
                             </div>
-                            <div class="hours-badge">${(l.hours||0).toFixed(1)}h</div>
+                            <div class="hours-badge">${esc((l.hours||0).toFixed(1))}h</div>
                         </div>`).join('');
 
                 html += `
                     <div class="card" style="margin-bottom:8px">
-                        <div style="font-weight:800;font-size:1.1em;margin-bottom:10px">${name}</div>
+                        <div style="font-weight:800;font-size:1.1em;margin-bottom:10px">${esc(name)}</div>
                         <div style="background:#f7f7f7;padding:10px;border-radius:8px;margin-bottom:10px;font-size:0.9em">${courseRows}</div>
                         <div style="font-weight:800;color:var(--primary);text-align:right">合計：${total.toFixed(1)} 小時</div>
                     </div>
@@ -1734,6 +1875,15 @@
         function startBossPrint() {
             renderBossReport();
             setTimeout(() => window.print(), 300);
+        }
+
+        // --- 離線偵測 ---
+        window.addEventListener('offline', () => showToast('目前離線，部分功能可能不可用'));
+        window.addEventListener('online', () => showToast('已重新連線'));
+
+        // --- Service Worker 註冊 ---
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(() => {});
         }
 
     </script>
