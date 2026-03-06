@@ -1447,7 +1447,7 @@
 
         function saveLogs() {} // Dummy (legacy)
         function saveSchedule() {} // Dummy (legacy)
-        function calculateHours(s,e){let diff=(new Date(`2000/01/01 ${e}`)-new Date(`2000/01/01 ${s}`))/36e5; return (diff<0?diff+24:diff).toFixed(2);}
+        function calculateHours(s,e){let diff=(new Date(`2000/01/01 ${e}`)-new Date(`2000/01/01 ${s}`))/36e5; return parseFloat((diff<0?diff+24:diff).toFixed(2));}
 
         // Escape HTML entities to prevent XSS
         function esc(str) {
@@ -1827,13 +1827,16 @@
         }
 
         function renderBossReport() {
+            const el = document.getElementById('bossReportContent');
+            if (!el) return;
+            try {
             const filteredLogs = bossLogs.filter(l =>
                 bossSelectedMonths.some(m => (l.date || '').startsWith(m))
             );
 
             if (filteredLogs.length === 0) {
-                document.getElementById('bossReportContent').innerHTML =
-                    '<p style="color:#aaa;text-align:center;padding:30px">所選月份沒有記錄</p>';
+                el.innerHTML =
+                    '<p style="color:#999;text-align:center;padding:40px 20px;font-size:0.95em">所選月份（' + bossSelectedMonths.join(', ') + '）沒有記錄</p>';
                 return;
             }
 
@@ -1870,7 +1873,7 @@
                                 <div class="record-title">${esc(l.course || '未命名')}</div>
                                 <div class="record-meta">${esc(l.date || '')} &nbsp; ${esc(l.start || '')}–${esc(l.end || '')} &nbsp; ${esc(l.location || '')}</div>
                             </div>
-                            <div class="hours-badge">${esc((l.hours||0).toFixed(1))}h</div>
+                            <div class="hours-badge">${parseFloat(l.hours||0).toFixed(1)}h</div>
                         </div>`).join('');
 
                 html += `
@@ -1882,7 +1885,10 @@
                     ${logRows}`;
             });
 
-            document.getElementById('bossReportContent').innerHTML = html;
+            el.innerHTML = html;
+            } catch(err) {
+                el.innerHTML = `<p style="color:#aaa;text-align:center;padding:30px">顯示錯誤: ${esc(err.message)}</p>`;
+            }
         }
 
         function startBossPrint() {
