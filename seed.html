@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <title>測試資料注入工具</title>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; background: #f5f5f5; }
+        h2 { color: #ff6b00; }
+        button { background: #ff6b00; color: white; border: none; padding: 14px 28px; border-radius: 10px; font-size: 1em; font-weight: 700; cursor: pointer; margin: 8px 4px; }
+        button.danger { background: #e53935; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        #auth-bar { background: white; border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; border: 1px solid #ddd; display: flex; align-items: center; justify-content: space-between; }
+        #auth-bar img { width: 32px; height: 32px; border-radius: 50%; margin-right: 10px; vertical-align: middle; }
+        .google-btn { background: white; color: #555; border: 1px solid #ddd; display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 8px; font-size: 0.95em; font-weight: 600; cursor: pointer; }
+        #action-btns { display: none; }
+        #log { background: white; border-radius: 10px; padding: 16px; margin-top: 20px; min-height: 100px; font-size: 0.85em; line-height: 1.8; border: 1px solid #ddd; white-space: pre-wrap; }
+        .ok { color: #2e7d32; } .err { color: #c62828; } .info { color: #1565c0; }
+        .card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid #ddd; }
+        label { font-size: 0.85em; font-weight: 600; color: #666; display: block; margin-bottom: 4px; }
+        input { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.9em; box-sizing: border-box; margin-bottom: 12px; }
+    </style>
+</head>
+<body>
+    <h2>🏀 教練助手 — 測試資料工具</h2>
+
+    <div id="auth-bar">
+        <div id="auth-status">尚未登入</div>
+        <button class="google-btn" id="loginBtn" onclick="login()">
+            <svg width="18" height="18" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.637-.057-1.252-.164-1.841H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.715H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.448 2.797 1.237 3.917l2.727-2.207z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.159 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
+            Google 登入
+        </button>
+    </div>
+
+    <div class="card">
+        <label>Boss UID（老闆 Firebase UID）</label>
+        <input id="bossUid" value="HHuKOAblZacETnPawLSrkfwhUY63">
+        <label>Boss 名稱</label>
+        <input id="bossName" value="3312 samuel">
+        <label>Coach UID（教練 Firebase UID）</label>
+        <input id="coachUid" value="SejVeoowbUg2jzVnD74Rw9Xhuev1">
+        <label>Coach 名稱</label>
+        <input id="coachName" value="Sam Sam">
+    </div>
+
+    <div id="action-btns">
+        <button onclick="seedAll()">🚀 注入所有測試資料</button>
+        <button class="danger" onclick="clearAll()">🗑️ 清除測試資料</button>
+    </div>
+    <div id="login-hint" style="color:#999; font-size:0.9em; margin: 8px 0;">請先登入才能操作</div>
+
+    <div id="log">等待操作…</div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBxPz6RfW4ph-T53b1s2Pzaw7-deX-iJxE",
+            authDomain: "coach-helper-ffcdb.firebaseapp.com",
+            projectId: "coach-helper-ffcdb",
+            storageBucket: "coach-helper-ffcdb.firebasestorage.app",
+            messagingSenderId: "320161236086",
+            appId: "1:320161236086:web:79b98040f780ba78d10b57"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        const logEl = document.getElementById('log');
+        const seededIds = { logs: [], schedule: [] };
+
+        // Auth state
+        auth.onAuthStateChanged(user => {
+            const statusEl = document.getElementById('auth-status');
+            const loginBtn = document.getElementById('loginBtn');
+            const actionBtns = document.getElementById('action-btns');
+            const loginHint = document.getElementById('login-hint');
+            if (user) {
+                statusEl.innerHTML = `<img src="${user.photoURL || ''}" onerror="this.style.display='none'"> <strong>${user.displayName || user.email}</strong>`;
+                loginBtn.textContent = '登出';
+                loginBtn.onclick = () => auth.signOut();
+                actionBtns.style.display = 'block';
+                loginHint.style.display = 'none';
+            } else {
+                statusEl.textContent = '尚未登入';
+                loginBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.637-.057-1.252-.164-1.841H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.715H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.448 2.797 1.237 3.917l2.727-2.207z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.159 6.656 3.58 9 3.58z" fill="#EA4335"/></svg> Google 登入`;
+                loginBtn.onclick = login;
+                actionBtns.style.display = 'none';
+                loginHint.style.display = 'block';
+            }
+        });
+
+        function login() {
+            auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())
+                .catch(e => alert('登入失敗: ' + e.message));
+        }
+
+        function print(msg, cls = '') {
+            logEl.innerHTML += `<span class="${cls}">${msg}</span>\n`;
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function calcHours(start, end) {
+            const diff = (new Date(`2000/01/01 ${end}`) - new Date(`2000/01/01 ${start}`)) / 3600000;
+            return (diff < 0 ? diff + 24 : diff).toFixed(2);
+        }
+
+        async function seedAll() {
+            logEl.innerHTML = '';
+            document.querySelectorAll('button').forEach(b => b.disabled = true);
+
+            const bossUid  = document.getElementById('bossUid').value.trim();
+            const bossName = document.getElementById('bossName').value.trim();
+            const coachUid = document.getElementById('coachUid').value.trim();
+
+            print('開始注入測試資料…', 'info');
+
+            // ── 測試用 logs（教練的上課記錄）──────────────────────────
+            const logsData = [
+                // 2026-01
+                { date:'2026-01-06', start:'09:00', end:'11:00', course:'籃球基礎班', location:'九龍灣體育館', isSub:false, note:'' },
+                { date:'2026-01-08', start:'14:00', end:'16:00', course:'進階訓練班', location:'沙田體育館',   isSub:false, note:'加強防守練習' },
+                { date:'2026-01-13', start:'09:00', end:'11:00', course:'籃球基礎班', location:'九龍灣體育館', isSub:false, note:'' },
+                { date:'2026-01-15', start:'10:00', end:'11:30', course:'青少年班',   location:'將軍澳體育館', isSub:true,  note:'代 Coach Wong' },
+                { date:'2026-01-20', start:'14:00', end:'16:00', course:'進階訓練班', location:'沙田體育館',   isSub:false, note:'' },
+                { date:'2026-01-22', start:'09:00', end:'11:00', course:'籃球基礎班', location:'九龍灣體育館', isSub:false, note:'' },
+                // 2026-02
+                { date:'2026-02-03', start:'09:00', end:'11:00', course:'籃球基礎班', location:'九龍灣體育館', isSub:false, note:'' },
+                { date:'2026-02-05', start:'14:00', end:'16:00', course:'進階訓練班', location:'沙田體育館',   isSub:false, note:'比賽前加練' },
+                { date:'2026-02-10', start:'09:00', end:'11:00', course:'籃球基礎班', location:'九龍灣體育館', isSub:false, note:'' },
+                { date:'2026-02-12', start:'10:00', end:'12:00', course:'青少年班',   location:'將軍澳體育館', isSub:false, note:'' },
+                { date:'2026-02-17', start:'09:00', end:'11:00', course:'籃球基礎班', location:'九龍灣體育館', isSub:true,  note:'代 Coach Lee' },
+                { date:'2026-02-19', start:'14:00', end:'16:00', course:'進階訓練班', location:'沙田體育館',   isSub:false, note:'' },
+                { date:'2026-02-24', start:'09:00', end:'11:00', course:'籃球基礎班', location:'九龍灣體育館', isSub:false, note:'' },
+                // 2026-03
+                { date:'2026-03-03', start:'09:00', end:'11:00', course:'籃球基礎班', location:'九龍灣體育館', isSub:false, note:'' },
+                { date:'2026-03-05', start:'14:00', end:'16:00', course:'進階訓練班', location:'沙田體育館',   isSub:false, note:'季後賽備戰' },
+                { date:'2026-03-06', start:'10:00', end:'11:30', course:'青少年班',   location:'將軍澳體育館', isSub:false, note:'' },
+            ];
+
+            let logCount = 0;
+            for (const l of logsData) {
+                const id = `seed_log_${Date.now()}_${logCount}`;
+                const data = {
+                    uid: coachUid,
+                    bossUid,
+                    boss: bossName,
+                    date: l.date, start: l.start, end: l.end,
+                    hours: calcHours(l.start, l.end),
+                    course: l.course, location: l.location,
+                    isSub: l.isSub, note: l.note,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                try {
+                    await db.collection('logs').doc(id).set(data);
+                    seededIds.logs.push(id);
+                    print(`  ✓ log ${l.date} ${l.course} (${data.hours}h)`, 'ok');
+                    logCount++;
+                } catch(e) {
+                    print(`  ✗ log ${l.date}: ${e.message}`, 'err');
+                }
+            }
+
+            // ── 測試用 schedule（課表）──────────────────────────────────
+            const scheduleData = [
+                // 週期性課表
+                { day:1, start:'09:00', end:'11:00', course:'籃球基礎班', location:'九龍灣體育館', isOneOff:false },
+                { day:3, start:'14:00', end:'16:00', course:'進階訓練班', location:'沙田體育館',   isOneOff:false },
+                { day:5, start:'10:00', end:'11:30', course:'青少年班',   location:'將軍澳體育館', isOneOff:false },
+                // 單次課程
+                { date:'2026-03-15', start:'09:00', end:'12:00', course:'比賽裁判', location:'伊館', isOneOff:true },
+                { date:'2026-03-22', start:'14:00', end:'17:00', course:'教練工作坊', location:'香港體院', isOneOff:true },
+            ];
+
+            let schCount = 0;
+            for (const s of scheduleData) {
+                const id = `seed_sch_${Date.now()}_${schCount}`;
+                const data = {
+                    uid: coachUid,
+                    assignedToUid: coachUid,
+                    createdByUid: bossUid,
+                    boss: bossName,
+                    bossUid,
+                    start: s.start, end: s.end,
+                    course: s.course, location: s.location,
+                    isOneOff: s.isOneOff,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                if (s.isOneOff) data.date = s.date;
+                else data.day = s.day;
+
+                try {
+                    await db.collection('schedule').doc(id).set(data);
+                    seededIds.schedule.push(id);
+                    const label = s.isOneOff ? s.date : `週${['日','一','二','三','四','五','六'][s.day]}`;
+                    print(`  ✓ schedule ${label} ${s.course}`, 'ok');
+                    schCount++;
+                } catch(e) {
+                    print(`  ✗ schedule ${s.course}: ${e.message}`, 'err');
+                }
+            }
+
+            print(`\n完成！共注入 ${logCount} 筆 logs、${schCount} 筆 schedule。`, 'info');
+            print('請重新整理 app 頁面以查看效果。', 'info');
+            document.querySelectorAll('button').forEach(b => b.disabled = false);
+        }
+
+        async function clearAll() {
+            if (!confirm('確定要刪除所有 seed_ 開頭的測試資料？')) return;
+            logEl.innerHTML = '';
+            document.querySelectorAll('button').forEach(b => b.disabled = true);
+            print('清除測試資料…', 'info');
+
+            let count = 0;
+            for (const col of ['logs', 'schedule']) {
+                const snap = await db.collection(col).get();
+                for (const doc of snap.docs) {
+                    if (doc.id.startsWith('seed_')) {
+                        await doc.ref.delete();
+                        print(`  ✓ 刪除 ${col}/${doc.id}`, 'ok');
+                        count++;
+                    }
+                }
+            }
+            print(`\n完成！共刪除 ${count} 筆測試資料。`, 'info');
+            document.querySelectorAll('button').forEach(b => b.disabled = false);
+        }
+    </script>
+</body>
+</html>
