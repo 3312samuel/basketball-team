@@ -1780,7 +1780,7 @@
                         l.uid === coach.uid &&
                         (l.date || '').startsWith(monthStr)
                     );
-                    const totalHours = coachLogs.reduce((sum, l) => sum + (l.hours || 0), 0);
+                    const totalHours = coachLogs.reduce((sum, l) => sum + parseFloat(l.hours || 0), 0);
                     const avatarUrl = coach.photoURL ? esc(coach.photoURL) : '';
                     return `
                         <div class="card">
@@ -1835,13 +1835,13 @@
             Object.entries(byCoach).forEach(([uid, coachLogs]) => {
                 const coach = allCoaches.find(c => c.uid === uid);
                 const name = coach ? (coach.name || coach.email) : uid;
-                const total = coachLogs.reduce((s, l) => s + (l.hours || 0), 0);
+                const total = coachLogs.reduce((s, l) => s + parseFloat(l.hours || 0), 0);
 
                 // Hours by course
                 const byCourse = {};
                 coachLogs.forEach(l => {
                     if (!byCourse[l.course]) byCourse[l.course] = 0;
-                    byCourse[l.course] += l.hours || 0;
+                    byCourse[l.course] += parseFloat(l.hours || 0);
                 });
 
                 const courseRows = Object.entries(byCourse)
