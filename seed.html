@@ -135,7 +135,7 @@
                 try {
                     await db.collection('users').doc(fc.uid).set({
                         uid: fc.uid,
-                        displayName: fc.name,
+                        name: fc.name,
                         email: fc.email,
                         photoURL: fc.photoURL,
                         role: 'coach',
@@ -357,9 +357,20 @@
                 logsData.push({ uid: effectiveCoach2Uid, date: d, start: '09:00', end: '11:00', course: '籃球基礎班', location: '九龍灣體育館', isSub: false, note: '' });
             });
 
-            // 課程 B 已過去日期嘅打卡
-            courseBDates.filter(d => d < todayStr).slice(0, 8).forEach(d => {
+            // 課程 B 已過去日期嘅打卡（Coach 1 + Coach 2/李大偉）
+            courseBDates.filter(d => d < todayStr).forEach(d => {
                 logsData.push({ uid: coachUid, date: d, start: '14:00', end: '16:00', course: '進階訓練班', location: '沙田體育館', isSub: false, note: '' });
+                logsData.push({ uid: fakeCoaches[1].uid, date: d, start: '14:00', end: '16:00', course: '進階訓練班', location: '沙田體育館', isSub: false, note: '' });
+            });
+
+            // 3月份額外打卡記錄（確保本月有數據顯示）
+            const marchDates = ['2026-03-02', '2026-03-04', '2026-03-05', '2026-03-06'];
+            marchDates.filter(d => d < todayStr).forEach(d => {
+                logsData.push({ uid: coachUid, date: d, start: '09:00', end: '11:00', course: '籃球基礎班', location: '九龍灣體育館', isSub: false, note: '' });
+                logsData.push({ uid: effectiveCoach2Uid, date: d, start: '09:00', end: '11:00', course: '籃球基礎班', location: '九龍灣體育館', isSub: false, note: '' });
+            });
+            marchDates.filter(d => d < todayStr).forEach(d => {
+                logsData.push({ uid: fakeCoaches[2].uid, date: d, start: '10:00', end: '12:00', course: '青少年週末班', location: '將軍澳體育館', isSub: false, note: '' });
             });
 
             // 代課記錄
@@ -403,17 +414,48 @@
             document.querySelectorAll('button').forEach(b => b.disabled = true);
             print('清除測試資料…', 'info');
 
+            const uid = auth.currentUser ? auth.currentUser.uid : '';
             let count = 0;
-            for (const col of ['logs', 'schedule', 'courses', 'users']) {
-                const snap = await db.collection(col).get();
-                for (const doc of snap.docs) {
+
+            // courses: boss can delete own courses
+            try {
+                const cSnap = await db.collection('courses').where('bossUid', '==', uid).get();
+                for (const doc of cSnap.docs) {
                     if (doc.id.startsWith('seed_')) {
-                        await doc.ref.delete();
-                        print(`  ✓ 刪除 ${col}/${doc.id}`, 'ok');
-                        count++;
+                        try { await doc.ref.delete(); print(`  ✓ 刪除 courses/${doc.id}`, 'ok'); count++; }
+                        catch(e) { print(`  ⚠ courses/${doc.id}: ${e.message}`, 'err'); }
                     }
                 }
+            } catch(e) { print(`  ✗ courses: ${e.message}`, 'err'); }
+
+            // users: overwrite seed docs with empty data then delete
+            for (const fakeId of ['seed_coach_alpha', 'seed_coach_beta', 'seed_coach_gamma']) {
+                try { await db.collection('users').doc(fakeId).delete(); print(`  ✓ 刪除 users/${fakeId}`, 'ok'); count++; }
+                catch(e) { print(`  ⚠ users/${fakeId}: 無法刪除（權限不足，可手動從 Firebase Console 刪除）`, 'err'); }
             }
+
+            // logs: query by bossUid to satisfy read rules
+            try {
+                const logSnap = await db.collection('logs').where('bossUid', '==', uid).get();
+                for (const doc of logSnap.docs) {
+                    if (doc.id.startsWith('seed_')) {
+                        try { await doc.ref.delete(); print(`  ✓ 刪除 logs/${doc.id}`, 'ok'); count++; }
+                        catch(e) { print(`  ⚠ logs/${doc.id}: ${e.message}`, 'err'); }
+                    }
+                }
+            } catch(e) { print(`  ✗ logs query: ${e.message}`, 'err'); }
+
+            // schedule: query by createdByUid to satisfy read rules
+            try {
+                const schSnap = await db.collection('schedule').where('createdByUid', '==', uid).get();
+                for (const doc of schSnap.docs) {
+                    if (doc.id.startsWith('seed_')) {
+                        try { await doc.ref.delete(); print(`  ✓ 刪除 schedule/${doc.id}`, 'ok'); count++; }
+                        catch(e) { print(`  ⚠ schedule/${doc.id}: ${e.message}`, 'err'); }
+                    }
+                }
+            } catch(e) { print(`  ✗ schedule query: ${e.message}`, 'err'); }
+
             print(`\n完成！共刪除 ${count} 筆測試資料。`, 'info');
             document.querySelectorAll('button').forEach(b => b.disabled = false);
         }
