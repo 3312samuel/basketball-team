@@ -258,6 +258,32 @@
         .btn-secondary { background: #f0f0f0; color: #666; border: none; padding: 16px; border-radius: 12px; font-weight: 700; flex: 1; }
         .modal-actions { display: flex; gap: 10px; margin-top: 10px; }
 
+        /* Print scope selector */
+        .print-scope-list { margin-bottom: 15px; }
+        .print-scope-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 12px; border-radius: 10px; cursor: pointer;
+            transition: background 0.15s; margin-bottom: 4px;
+        }
+        .print-scope-item:active { background: #f0f0f0; }
+        .print-scope-item.active { background: var(--blue-bg); }
+        .print-scope-radio {
+            width: 20px; height: 20px; border-radius: 50%;
+            border: 2px solid #ccc; position: relative; flex-shrink: 0;
+        }
+        .print-scope-item.active .print-scope-radio { border-color: var(--blue); }
+        .print-scope-item.active .print-scope-radio::after {
+            content: ''; position: absolute; top: 3px; left: 3px;
+            width: 10px; height: 10px; border-radius: 50%; background: var(--blue);
+        }
+        .print-select-list { max-height: 200px; overflow-y: auto; margin-bottom: 10px; }
+        .print-select-item {
+            display: flex; align-items: center; padding: 10px 12px;
+            border-radius: 8px; cursor: pointer; transition: background 0.15s; margin-bottom: 2px;
+        }
+        .print-select-item:active { background: #f0f0f0; }
+        .print-select-item.selected { background: var(--blue-bg); font-weight: 600; }
+
         /* Course Filters */
         .course-filters {
             display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; padding: 10px;
@@ -331,7 +357,7 @@
             body { background: white; padding: 0; color: black; -webkit-print-color-adjust: exact; }
             /* Hide common UI elements */
             .bottom-nav, .input-section, .tools-area, header, .view-toggle, .delete-btn,
-            .month-selector button, .course-filters, .month-selector, .fab-btn { display: none !important; }
+            .month-selector button, .course-filters, .month-selector, .fab-btn, .modal-overlay { display: none !important; }
 
             /* === Coach mode print === */
             body.print-coach #boss-content { display: none !important; }
@@ -358,10 +384,7 @@
             body.print-boss #boss-content .bottom-nav { display: none !important; }
             body.print-boss .card { display: none !important; }
             body.print-boss #bossReportToggle { display: none !important; }
-            body.print-boss #bossReportContent { display: block !important; }
-            body.print-boss #bossReportContent .card { display: block !important; background: white !important; color: black !important; box-shadow: none !important; border: 1px solid #ddd !important; }
-            body.print-boss #bossReportContent .record-card { background: white !important; color: black !important; box-shadow: none !important; border: 1px solid #eee !important; }
-            body.print-boss #bossReportContent .hours-badge { color: black !important; }
+            body.print-boss #bossReportContent { display: none !important; }
             body.print-boss .boss-print-report { display: block; font-family: sans-serif; }
 
             /* Print header & layout (shared) */
@@ -430,6 +453,10 @@
         body.dark-mode .month-selector { background: #2c2c2c; border-color: #3a3a3a; }
         body.dark-mode .btn-action { background: #2c2c2c; color: #ccc; border-color: #444; }
         body.dark-mode .btn-secondary { background: #333; color: #ccc; }
+        body.dark-mode .print-scope-item:active { background: #333; }
+        body.dark-mode .print-scope-item.active { background: rgba(33, 150, 243, 0.15); }
+        body.dark-mode .print-select-item:active { background: #333; }
+        body.dark-mode .print-select-item.selected { background: rgba(33, 150, 243, 0.15); }
         body.dark-mode .checkbox-wrapper { background: #333; border-color: #444; }
         body.dark-mode input.field-error { background: #3a1a1a !important; }
         body.dark-mode #loadingOverlay { background: #1a1a1a; }
@@ -942,6 +969,39 @@
             <div class="sub-coach-list" id="subCoachList"></div>
             <div class="modal-actions">
                 <button class="btn-secondary" onclick="closeSubCoachModal()">取消</button>
+            </div>
+        </div>
+    </div>
+    <!-- Boss Print Scope Modal -->
+    <div class="modal-overlay" id="bossPrintModal" onclick="if(event.target===this)closeBossPrintModal()">
+        <div class="modal-card">
+            <div class="modal-title">列印範圍</div>
+            <div id="printScopeStep" class="print-scope-list">
+                <div class="print-scope-item active" data-scope="all" onclick="selectPrintScope('all')">
+                    <div class="print-scope-radio"></div><span>全部</span>
+                </div>
+                <div class="print-scope-item" data-scope="course" onclick="selectPrintScope('course')">
+                    <div class="print-scope-radio"></div><span>按課程</span>
+                </div>
+                <div class="print-scope-item" data-scope="coach" onclick="selectPrintScope('coach')">
+                    <div class="print-scope-radio"></div><span>按教練</span>
+                </div>
+            </div>
+            <div id="printCourseStep" style="display:none">
+                <div style="font-size:0.85em;color:#888;margin-bottom:8px">選擇課程：</div>
+                <div id="printCourseList" class="print-select-list"></div>
+            </div>
+            <div id="printCoachStep" style="display:none">
+                <div style="font-size:0.85em;color:#888;margin-bottom:8px">選擇教練：</div>
+                <div id="printCoachList" class="print-select-list"></div>
+            </div>
+            <div id="printCoachCourseStep" style="display:none">
+                <div style="font-size:0.85em;color:#888;margin-bottom:8px">篩選課程（可選）：</div>
+                <div id="printCoachCourseList" class="print-select-list"></div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="closeBossPrintModal()">取消</button>
+                <button class="btn-primary" onclick="confirmBossPrint()" style="flex:2">列印</button>
             </div>
         </div>
     </div>
@@ -1878,6 +1938,12 @@
         let bossSelectedMonths = [];
         let courseStatusFilter = 'all'; // 'all' | 'active' | 'archived'
         let bossReportViewMode = 'byCoach'; // 'byCoach' | 'byCourse'
+        let bossPrintScope = 'all'; // 'all' | 'course' | 'coach'
+        let bossPrintCourseFilter = null;
+        let bossPrintCoachFilter = null;
+        let bossPrintCoachCourseFilter = null;
+        let _printCourses = [];
+        let _printCoachCourses = [];
 
         // Init default month for boss reports
         const _bossNow = new Date();
@@ -2846,19 +2912,109 @@
         }
 
         function startBossPrint() {
+            bossPrintScope = 'all';
+            bossPrintCourseFilter = null;
+            bossPrintCoachFilter = null;
+            bossPrintCoachCourseFilter = null;
+            populatePrintModal();
+            document.getElementById('bossPrintModal').style.display = 'flex';
+        }
+
+        function closeBossPrintModal() {
+            document.getElementById('bossPrintModal').style.display = 'none';
+        }
+
+        function selectPrintScope(scope) {
+            bossPrintScope = scope;
+            bossPrintCourseFilter = null;
+            bossPrintCoachFilter = null;
+            bossPrintCoachCourseFilter = null;
+            document.querySelectorAll('#printScopeStep .print-scope-item').forEach(item => {
+                item.classList.toggle('active', item.dataset.scope === scope);
+            });
+            document.getElementById('printCourseStep').style.display = scope === 'course' ? '' : 'none';
+            document.getElementById('printCoachStep').style.display = scope === 'coach' ? '' : 'none';
+            document.getElementById('printCoachCourseStep').style.display = 'none';
+            document.querySelectorAll('.print-select-item.selected').forEach(el => el.classList.remove('selected'));
+        }
+
+        function populatePrintModal() {
+            const filteredLogs = bossLogs.filter(l =>
+                bossSelectedMonths.some(m => (l.date || '').startsWith(m))
+            );
+            _printCourses = [...new Set(filteredLogs.map(l => l.course || '未命名'))].sort();
+            document.getElementById('printCourseList').innerHTML = _printCourses.map((c, i) =>
+                `<div class="print-select-item" onclick="selectPrintCourse(this,${i})">${esc(c)}</div>`
+            ).join('');
+            const coachUids = [...new Set(filteredLogs.map(l => l.uid))];
+            document.getElementById('printCoachList').innerHTML = coachUids.map(uid => {
+                const coach = allCoaches.find(c => c.uid === uid);
+                const name = coach ? (coach.name || coach.email) : uid;
+                return `<div class="print-select-item" data-uid="${uid}" onclick="selectPrintCoach(this,'${uid}')">${esc(name)}</div>`;
+            }).join('');
+            selectPrintScope('all');
+        }
+
+        function selectPrintCourse(el, idx) {
+            bossPrintCourseFilter = _printCourses[idx];
+            document.querySelectorAll('#printCourseList .print-select-item').forEach(e => e.classList.remove('selected'));
+            el.classList.add('selected');
+        }
+
+        function selectPrintCoach(el, uid) {
+            bossPrintCoachFilter = uid;
+            bossPrintCoachCourseFilter = null;
+            document.querySelectorAll('#printCoachList .print-select-item').forEach(e => e.classList.remove('selected'));
+            el.classList.add('selected');
+            const filteredLogs = bossLogs.filter(l =>
+                bossSelectedMonths.some(m => (l.date || '').startsWith(m)) && l.uid === uid
+            );
+            const courses = [...new Set(filteredLogs.map(l => l.course || '未命名'))].sort();
+            if (courses.length > 1) {
+                _printCoachCourses = [null, ...courses];
+                document.getElementById('printCoachCourseList').innerHTML =
+                    `<div class="print-select-item selected" onclick="selectPrintCoachCourse(this,0)">全部課程</div>` +
+                    courses.map((c, i) =>
+                        `<div class="print-select-item" onclick="selectPrintCoachCourse(this,${i + 1})">${esc(c)}</div>`
+                    ).join('');
+                document.getElementById('printCoachCourseStep').style.display = '';
+            } else {
+                document.getElementById('printCoachCourseStep').style.display = 'none';
+            }
+        }
+
+        function selectPrintCoachCourse(el, idx) {
+            bossPrintCoachCourseFilter = _printCoachCourses[idx];
+            document.querySelectorAll('#printCoachCourseList .print-select-item').forEach(e => e.classList.remove('selected'));
+            el.classList.add('selected');
+        }
+
+        function confirmBossPrint() {
+            closeBossPrintModal();
             renderBossReport();
-            renderBossPrintView();
+            renderBossPrintView(bossPrintScope, bossPrintCourseFilter, bossPrintCoachFilter, bossPrintCoachCourseFilter);
             document.body.classList.add('print-boss');
             setTimeout(() => window.print(), 300);
         }
 
-        function renderBossPrintView() {
+        function renderBossPrintView(scope, courseFilter, coachFilter, coachCourseFilter) {
+            scope = scope || 'all';
             const pContainer = document.getElementById('bossPrintReport');
             if (!pContainer) return;
 
-            const filteredLogs = bossLogs.filter(l =>
+            let filteredLogs = bossLogs.filter(l =>
                 bossSelectedMonths.some(m => (l.date || '').startsWith(m))
             );
+
+            // Apply scope filter
+            if (scope === 'course' && courseFilter) {
+                filteredLogs = filteredLogs.filter(l => (l.course || '未命名') === courseFilter);
+            } else if (scope === 'coach' && coachFilter) {
+                filteredLogs = filteredLogs.filter(l => l.uid === coachFilter);
+                if (coachCourseFilter) {
+                    filteredLogs = filteredLogs.filter(l => (l.course || '未命名') === coachCourseFilter);
+                }
+            }
 
             // Title
             let titleStr = '';
@@ -2869,8 +3025,26 @@
                 const sorted = [...bossSelectedMonths].sort();
                 titleStr = `${sorted[0]} 至 ${sorted[sorted.length - 1]} 工時報表 (${bossSelectedMonths.length}個月)`;
             }
+            if (scope === 'course' && courseFilter) {
+                titleStr += ` — ${courseFilter}`;
+            } else if (scope === 'coach' && coachFilter) {
+                const _c = allCoaches.find(c => c.uid === coachFilter);
+                titleStr += ` — ${_c ? (_c.name || _c.email) : coachFilter}`;
+                if (coachCourseFilter) titleStr += `（${coachCourseFilter}）`;
+            }
 
             const totalH = filteredLogs.reduce((s, l) => s + parseFloat(l.hours || 0), 0);
+
+            // Scope label for header
+            let scopeLabel;
+            if (scope === 'course' && courseFilter) scopeLabel = `課程：${courseFilter}`;
+            else if (scope === 'coach' && coachFilter) {
+                const _c2 = allCoaches.find(c => c.uid === coachFilter);
+                scopeLabel = `教練：${_c2 ? (_c2.name || _c2.email) : coachFilter}`;
+                if (coachCourseFilter) scopeLabel += ` / ${coachCourseFilter}`;
+            } else {
+                scopeLabel = bossReportViewMode === 'byCourse' ? '按課程' : '按教練';
+            }
 
             let html = '';
             if (printOrgName) html += `<div class="print-org-header">${esc(printOrgName)}</div>`;
@@ -2878,7 +3052,7 @@
                 <div class="print-header">
                     <div class="print-title">${esc(titleStr)}</div>
                     <div class="print-meta">
-                        <div style="font-weight:700;">教練工時總覽（${bossReportViewMode === 'byCourse' ? '按課程' : '按教練'}）</div>
+                        <div style="font-weight:700;">教練工時總覽（${esc(scopeLabel)}）</div>
                         <div style="font-weight:700;">總計: ${totalH.toFixed(2)} hr</div>
                     </div>
                 </div>`;
