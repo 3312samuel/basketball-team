@@ -406,43 +406,44 @@
             const uid = auth.currentUser ? auth.currentUser.uid : '';
             let count = 0;
 
-            // courses & users: simple read rules, can get() all
-            for (const col of ['courses', 'users']) {
-                try {
-                    const snap = await db.collection(col).get();
-                    for (const doc of snap.docs) {
-                        if (doc.id.startsWith('seed_')) {
-                            await doc.ref.delete();
-                            print(`  ✓ 刪除 ${col}/${doc.id}`, 'ok');
-                            count++;
-                        }
+            // courses: boss can delete own courses
+            try {
+                const cSnap = await db.collection('courses').where('bossUid', '==', uid).get();
+                for (const doc of cSnap.docs) {
+                    if (doc.id.startsWith('seed_')) {
+                        try { await doc.ref.delete(); print(`  ✓ 刪除 courses/${doc.id}`, 'ok'); count++; }
+                        catch(e) { print(`  ⚠ courses/${doc.id}: ${e.message}`, 'err'); }
                     }
-                } catch(e) { print(`  ✗ ${col}: ${e.message}`, 'err'); }
+                }
+            } catch(e) { print(`  ✗ courses: ${e.message}`, 'err'); }
+
+            // users: overwrite seed docs with empty data then delete
+            for (const fakeId of ['seed_coach_alpha', 'seed_coach_beta', 'seed_coach_gamma']) {
+                try { await db.collection('users').doc(fakeId).delete(); print(`  ✓ 刪除 users/${fakeId}`, 'ok'); count++; }
+                catch(e) { print(`  ⚠ users/${fakeId}: 無法刪除（權限不足，可手動從 Firebase Console 刪除）`, 'err'); }
             }
 
-            // logs: must query by bossUid to satisfy read rules
+            // logs: query by bossUid to satisfy read rules
             try {
                 const logSnap = await db.collection('logs').where('bossUid', '==', uid).get();
                 for (const doc of logSnap.docs) {
                     if (doc.id.startsWith('seed_')) {
-                        await doc.ref.delete();
-                        print(`  ✓ 刪除 logs/${doc.id}`, 'ok');
-                        count++;
+                        try { await doc.ref.delete(); print(`  ✓ 刪除 logs/${doc.id}`, 'ok'); count++; }
+                        catch(e) { print(`  ⚠ logs/${doc.id}: ${e.message}`, 'err'); }
                     }
                 }
-            } catch(e) { print(`  ✗ logs: ${e.message}`, 'err'); }
+            } catch(e) { print(`  ✗ logs query: ${e.message}`, 'err'); }
 
-            // schedule: must query by createdByUid to satisfy read rules
+            // schedule: query by createdByUid to satisfy read rules
             try {
                 const schSnap = await db.collection('schedule').where('createdByUid', '==', uid).get();
                 for (const doc of schSnap.docs) {
                     if (doc.id.startsWith('seed_')) {
-                        await doc.ref.delete();
-                        print(`  ✓ 刪除 schedule/${doc.id}`, 'ok');
-                        count++;
+                        try { await doc.ref.delete(); print(`  ✓ 刪除 schedule/${doc.id}`, 'ok'); count++; }
+                        catch(e) { print(`  ⚠ schedule/${doc.id}: ${e.message}`, 'err'); }
                     }
                 }
-            } catch(e) { print(`  ✗ schedule: ${e.message}`, 'err'); }
+            } catch(e) { print(`  ✗ schedule query: ${e.message}`, 'err'); }
 
             print(`\n完成！共刪除 ${count} 筆測試資料。`, 'info');
             document.querySelectorAll('button').forEach(b => b.disabled = false);
