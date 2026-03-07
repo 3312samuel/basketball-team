@@ -135,7 +135,7 @@
                 try {
                     await db.collection('users').doc(fc.uid).set({
                         uid: fc.uid,
-                        displayName: fc.name,
+                        name: fc.name,
                         email: fc.email,
                         photoURL: fc.photoURL,
                         role: 'coach',
