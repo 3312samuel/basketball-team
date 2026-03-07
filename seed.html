@@ -39,10 +39,14 @@
         <input id="bossUid" value="HHuKOAblZacETnPawLSrkfwhUY63">
         <label>Boss 名稱</label>
         <input id="bossName" value="3312 samuel">
-        <label>Coach UID（教練 Firebase UID）</label>
+        <label>Coach 1 UID</label>
         <input id="coachUid" value="SejVeoowbUg2jzVnD74Rw9Xhuev1">
-        <label>Coach 名稱</label>
+        <label>Coach 1 名稱</label>
         <input id="coachName" value="Sam Sam">
+        <label>Coach 2 UID（可選，用於多教練課程）</label>
+        <input id="coach2Uid" value="">
+        <label>Coach 2 名稱</label>
+        <input id="coach2Name" value="">
     </div>
 
     <div id="action-btns">
@@ -67,7 +71,7 @@
         const auth = firebase.auth();
 
         const logEl = document.getElementById('log');
-        const seededIds = { logs: [], schedule: [] };
+        const seededIds = { logs: [], schedule: [], courses: [], users: [] };
 
         // Auth state
         auth.onAuthStateChanged(user => {
@@ -112,96 +116,284 @@
             const bossUid  = document.getElementById('bossUid').value.trim();
             const bossName = document.getElementById('bossName').value.trim();
             const coachUid = document.getElementById('coachUid').value.trim();
+            const coachName = document.getElementById('coachName').value.trim();
+            const coach2Uid = document.getElementById('coach2Uid').value.trim();
+            const coach2Name = document.getElementById('coach2Name').value.trim();
 
             print('開始注入測試資料…', 'info');
 
-            // ── 測試用 logs（教練的上課記錄）──────────────────────────
-            const logsData = [
-                // 2026-01
-                { date:'2026-01-06', start:'09:00', end:'11:00', course:'籃球基礎班', location:'九龍灣體育館', isSub:false, note:'' },
-                { date:'2026-01-08', start:'14:00', end:'16:00', course:'進階訓練班', location:'沙田體育館',   isSub:false, note:'加強防守練習' },
-                { date:'2026-01-13', start:'09:00', end:'11:00', course:'籃球基礎班', location:'九龍灣體育館', isSub:false, note:'' },
-                { date:'2026-01-15', start:'10:00', end:'11:30', course:'青少年班',   location:'將軍澳體育館', isSub:true,  note:'代 Coach Wong' },
-                { date:'2026-01-20', start:'14:00', end:'16:00', course:'進階訓練班', location:'沙田體育館',   isSub:false, note:'' },
-                { date:'2026-01-22', start:'09:00', end:'11:00', course:'籃球基礎班', location:'九龍灣體育館', isSub:false, note:'' },
-                // 2026-02
-                { date:'2026-02-03', start:'09:00', end:'11:00', course:'籃球基礎班', location:'九龍灣體育館', isSub:false, note:'' },
-                { date:'2026-02-05', start:'14:00', end:'16:00', course:'進階訓練班', location:'沙田體育館',   isSub:false, note:'比賽前加練' },
-                { date:'2026-02-10', start:'09:00', end:'11:00', course:'籃球基礎班', location:'九龍灣體育館', isSub:false, note:'' },
-                { date:'2026-02-12', start:'10:00', end:'12:00', course:'青少年班',   location:'將軍澳體育館', isSub:false, note:'' },
-                { date:'2026-02-17', start:'09:00', end:'11:00', course:'籃球基礎班', location:'九龍灣體育館', isSub:true,  note:'代 Coach Lee' },
-                { date:'2026-02-19', start:'14:00', end:'16:00', course:'進階訓練班', location:'沙田體育館',   isSub:false, note:'' },
-                { date:'2026-02-24', start:'09:00', end:'11:00', course:'籃球基礎班', location:'九龍灣體育館', isSub:false, note:'' },
-                // 2026-03
-                { date:'2026-03-03', start:'09:00', end:'11:00', course:'籃球基礎班', location:'九龍灣體育館', isSub:false, note:'' },
-                { date:'2026-03-05', start:'14:00', end:'16:00', course:'進階訓練班', location:'沙田體育館',   isSub:false, note:'季後賽備戰' },
-                { date:'2026-03-06', start:'10:00', end:'11:30', course:'青少年班',   location:'將軍澳體育館', isSub:false, note:'' },
+            // ── 0. 建立假教練用戶 (users) ─────────────────────────
+            print('\n👤 建立假教練用戶…', 'info');
+
+            const fakeCoaches = [
+                { uid: 'seed_coach_alpha', name: '陳小明', email: 'coach_alpha@test.com', photoURL: '' },
+                { uid: 'seed_coach_beta',  name: '李大偉', email: 'coach_beta@test.com',  photoURL: '' },
+                { uid: 'seed_coach_gamma', name: '張美玲', email: 'coach_gamma@test.com', photoURL: '' },
             ];
+
+            for (const fc of fakeCoaches) {
+                try {
+                    await db.collection('users').doc(fc.uid).set({
+                        uid: fc.uid,
+                        displayName: fc.name,
+                        email: fc.email,
+                        photoURL: fc.photoURL,
+                        role: 'coach',
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    seededIds.users.push(fc.uid);
+                    print(`  ✓ 假教練「${fc.name}」(${fc.uid})`, 'ok');
+                } catch(e) { print(`  ✗ 用戶 ${fc.name}: ${e.message}`, 'err'); }
+            }
+
+            // 自動填入 Coach 2 欄位（如果空白）
+            if (!coach2Uid) {
+                document.getElementById('coach2Uid').value = fakeCoaches[0].uid;
+                document.getElementById('coach2Name').value = fakeCoaches[0].name;
+            }
+            const effectiveCoach2Uid = coach2Uid || fakeCoaches[0].uid;
+            const effectiveCoach2Name = coach2Name || fakeCoaches[0].name;
+
+            // ── 1. 建立課程 (courses) ──────────────────────────
+            print('\n📚 建立課程…', 'info');
+
+            const coaches1 = [{ uid: coachUid, name: coachName, email: '', photoURL: '' }];
+            coaches1.push({ uid: effectiveCoach2Uid, name: effectiveCoach2Name, email: '', photoURL: '' });
+
+            // 課程 A：籃球基礎班（1月-2月，週一週三）
+            const courseADates = [];
+            const aStart = new Date('2026-01-05T00:00:00');
+            const aEnd = new Date('2026-02-28T00:00:00');
+            for (let d = new Date(aStart); d <= aEnd; d.setDate(d.getDate() + 1)) {
+                if (d.getDay() === 1 || d.getDay() === 3) {
+                    courseADates.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+                }
+            }
+
+            const courseAId = `seed_course_A_${Date.now()}`;
+            const courseAData = {
+                name: '籃球基礎班',
+                bossUid, bossName,
+                location: '九龍灣體育館',
+                start: '09:00', end: '11:00',
+                coaches: coaches1,
+                dates: courseADates,
+                dateRangeStart: '2026-01-05', dateRangeEnd: '2026-02-28',
+                weekdays: [1, 3],
+                status: 'active',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            try {
+                await db.collection('courses').doc(courseAId).set(courseAData);
+                seededIds.courses.push(courseAId);
+                print(`  ✓ 課程「籃球基礎班」${courseADates.length} 個日期，${coaches1.length} 位教練`, 'ok');
+            } catch(e) { print(`  ✗ 課程 A: ${e.message}`, 'err'); }
+
+            // 課程 B：進階訓練班（2月-3月，週二週四）
+            const courseBDates = [];
+            const bStart = new Date('2026-02-03T00:00:00');
+            const bEnd = new Date('2026-03-31T00:00:00');
+            for (let d = new Date(bStart); d <= bEnd; d.setDate(d.getDate() + 1)) {
+                if (d.getDay() === 2 || d.getDay() === 4) {
+                    courseBDates.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+                }
+            }
+
+            const courseBId = `seed_course_B_${Date.now()}`;
+            const courseBData = {
+                name: '進階訓練班',
+                bossUid, bossName,
+                location: '沙田體育館',
+                start: '14:00', end: '16:00',
+                coaches: [
+                    { uid: coachUid, name: coachName, email: '', photoURL: '' },
+                    { uid: fakeCoaches[1].uid, name: fakeCoaches[1].name, email: fakeCoaches[1].email, photoURL: '' }
+                ],
+                dates: courseBDates,
+                dateRangeStart: '2026-02-03', dateRangeEnd: '2026-03-31',
+                weekdays: [2, 4],
+                status: 'active',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            try {
+                await db.collection('courses').doc(courseBId).set(courseBData);
+                seededIds.courses.push(courseBId);
+                print(`  ✓ 課程「進階訓練班」${courseBDates.length} 個日期`, 'ok');
+            } catch(e) { print(`  ✗ 課程 B: ${e.message}`, 'err'); }
+
+            // 課程 C：青少年週末班（3月，手動日期，已封存）
+            const courseCDates = ['2026-03-07', '2026-03-14', '2026-03-21', '2026-03-28'];
+            const courseCId = `seed_course_C_${Date.now()}`;
+            const courseCData = {
+                name: '青少年週末班',
+                bossUid, bossName,
+                location: '將軍澳體育館',
+                start: '10:00', end: '12:00',
+                coaches: [{ uid: coachUid, name: coachName, email: '', photoURL: '' }],
+                dates: courseCDates,
+                status: 'archived',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            try {
+                await db.collection('courses').doc(courseCId).set(courseCData);
+                seededIds.courses.push(courseCId);
+                print(`  ✓ 課程「青少年週末班」4 個日期（已封存）`, 'ok');
+            } catch(e) { print(`  ✗ 課程 C: ${e.message}`, 'err'); }
+
+            // ── 2. 建立課程排課條目 (schedule) ─────────────────────
+            print('\n📅 建立排課條目…', 'info');
+
+            let schCount = 0;
+
+            // 課程 A 排課
+            for (const date of courseADates) {
+                for (const coach of coaches1) {
+                    const id = `seed_sch_${Date.now()}_${schCount}`;
+                    const isSub = (date === '2026-02-17' && coach.uid === coachUid);
+                    await db.collection('schedule').doc(id).set({
+                        createdByUid: bossUid,
+                        assignedToUid: isSub ? effectiveCoach2Uid : coach.uid,
+                        boss: bossName,
+                        course: '籃球基礎班',
+                        location: '九龍灣體育館',
+                        start: '09:00', end: '11:00',
+                        date, isOneOff: true,
+                        courseId: courseAId, isFromCourse: true,
+                        originalCoachUid: isSub ? coachUid : null,
+                        isSub: isSub,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    seededIds.schedule.push(id);
+                    schCount++;
+                }
+            }
+            print(`  ✓ 籃球基礎班 ${courseADates.length * coaches1.length} 個排課（含 1 個代課）`, 'ok');
+
+            // 課程 B 排課（2 位教練）
+            const courseBCoaches = [coachUid, fakeCoaches[1].uid];
+            for (const date of courseBDates) {
+                for (const cUid of courseBCoaches) {
+                    const id = `seed_sch_${Date.now()}_${schCount}`;
+                    await db.collection('schedule').doc(id).set({
+                        createdByUid: bossUid,
+                        assignedToUid: cUid,
+                        boss: bossName,
+                        course: '進階訓練班',
+                        location: '沙田體育館',
+                        start: '14:00', end: '16:00',
+                        date, isOneOff: true,
+                        courseId: courseBId, isFromCourse: true,
+                        originalCoachUid: null, isSub: false,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    seededIds.schedule.push(id);
+                    schCount++;
+                }
+            }
+            print(`  ✓ 進階訓練班 ${courseBDates.length * 2} 個排課（2位教練）`, 'ok');
+
+            // 課程 C 排課（封存課程，但保留過去排課）
+            for (const date of courseCDates) {
+                const id = `seed_sch_${Date.now()}_${schCount}`;
+                await db.collection('schedule').doc(id).set({
+                    createdByUid: bossUid,
+                    assignedToUid: coachUid,
+                    boss: bossName,
+                    course: '青少年週末班',
+                    location: '將軍澳體育館',
+                    start: '10:00', end: '12:00',
+                    date, isOneOff: true,
+                    courseId: courseCId, isFromCourse: true,
+                    originalCoachUid: null, isSub: false,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                seededIds.schedule.push(id);
+                schCount++;
+            }
+            print(`  ✓ 青少年週末班 ${courseCDates.length} 個排課`, 'ok');
+
+            // 獨立排課（非課程，向後相容測試）
+            const standaloneSch = [
+                { date:'2026-03-15', start:'09:00', end:'12:00', course:'比賽裁判', location:'伊館' },
+                { date:'2026-03-22', start:'14:00', end:'17:00', course:'教練工作坊', location:'香港體院' },
+            ];
+            for (const s of standaloneSch) {
+                const id = `seed_sch_${Date.now()}_${schCount}`;
+                await db.collection('schedule').doc(id).set({
+                    uid: coachUid,
+                    assignedToUid: coachUid,
+                    createdByUid: bossUid,
+                    boss: bossName,
+                    start: s.start, end: s.end,
+                    course: s.course, location: s.location,
+                    date: s.date, isOneOff: true,
+                    courseId: null, isFromCourse: false,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                seededIds.schedule.push(id);
+                schCount++;
+                print(`  ✓ 獨立排課 ${s.date} ${s.course}`, 'ok');
+            }
+
+            // ── 3. 建立打卡記錄 (logs) ──────────────────────────────
+            print('\n📝 建立打卡記錄…', 'info');
+
+            // 過去嘅日期建立打卡記錄（模擬教練已打卡）
+            const today = new Date();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+            const logsData = [];
+
+            // 課程 A 已過去日期嘅打卡（Coach 1）
+            courseADates.filter(d => d < todayStr).slice(0, 12).forEach(d => {
+                logsData.push({ uid: coachUid, date: d, start: '09:00', end: '11:00', course: '籃球基礎班', location: '九龍灣體育館', isSub: false, note: '' });
+            });
+
+            // Coach 2 打卡
+            courseADates.filter(d => d < todayStr).slice(0, 8).forEach(d => {
+                logsData.push({ uid: effectiveCoach2Uid, date: d, start: '09:00', end: '11:00', course: '籃球基礎班', location: '九龍灣體育館', isSub: false, note: '' });
+            });
+
+            // 課程 B 已過去日期嘅打卡
+            courseBDates.filter(d => d < todayStr).slice(0, 8).forEach(d => {
+                logsData.push({ uid: coachUid, date: d, start: '14:00', end: '16:00', course: '進階訓練班', location: '沙田體育館', isSub: false, note: '' });
+            });
+
+            // 代課記錄
+            logsData.push({ uid: effectiveCoach2Uid, date: '2026-02-17', start: '09:00', end: '11:00', course: '籃球基礎班', location: '九龍灣體育館', isSub: true, note: '代課' });
 
             let logCount = 0;
             for (const l of logsData) {
                 const id = `seed_log_${Date.now()}_${logCount}`;
-                const data = {
-                    uid: coachUid,
-                    bossUid,
-                    boss: bossName,
-                    date: l.date, start: l.start, end: l.end,
-                    hours: calcHours(l.start, l.end),
-                    course: l.course, location: l.location,
-                    isSub: l.isSub, note: l.note,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                };
                 try {
-                    await db.collection('logs').doc(id).set(data);
+                    await db.collection('logs').doc(id).set({
+                        uid: l.uid,
+                        bossUid,
+                        boss: bossName,
+                        date: l.date, start: l.start, end: l.end,
+                        hours: calcHours(l.start, l.end),
+                        course: l.course, location: l.location,
+                        isSub: l.isSub, note: l.note,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
                     seededIds.logs.push(id);
-                    print(`  ✓ log ${l.date} ${l.course} (${data.hours}h)`, 'ok');
                     logCount++;
                 } catch(e) {
                     print(`  ✗ log ${l.date}: ${e.message}`, 'err');
                 }
             }
+            print(`  ✓ ${logCount} 筆打卡記錄`, 'ok');
 
-            // ── 測試用 schedule（課表）──────────────────────────────────
-            const scheduleData = [
-                // 週期性課表
-                { day:1, start:'09:00', end:'11:00', course:'籃球基礎班', location:'九龍灣體育館', isOneOff:false },
-                { day:3, start:'14:00', end:'16:00', course:'進階訓練班', location:'沙田體育館',   isOneOff:false },
-                { day:5, start:'10:00', end:'11:30', course:'青少年班',   location:'將軍澳體育館', isOneOff:false },
-                // 單次課程
-                { date:'2026-03-15', start:'09:00', end:'12:00', course:'比賽裁判', location:'伊館', isOneOff:true },
-                { date:'2026-03-22', start:'14:00', end:'17:00', course:'教練工作坊', location:'香港體院', isOneOff:true },
-            ];
-
-            let schCount = 0;
-            for (const s of scheduleData) {
-                const id = `seed_sch_${Date.now()}_${schCount}`;
-                const data = {
-                    uid: coachUid,
-                    assignedToUid: coachUid,
-                    createdByUid: bossUid,
-                    boss: bossName,
-                    bossUid,
-                    start: s.start, end: s.end,
-                    course: s.course, location: s.location,
-                    isOneOff: s.isOneOff,
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                };
-                if (s.isOneOff) data.date = s.date;
-                else data.day = s.day;
-
-                try {
-                    await db.collection('schedule').doc(id).set(data);
-                    seededIds.schedule.push(id);
-                    const label = s.isOneOff ? s.date : `週${['日','一','二','三','四','五','六'][s.day]}`;
-                    print(`  ✓ schedule ${label} ${s.course}`, 'ok');
-                    schCount++;
-                } catch(e) {
-                    print(`  ✗ schedule ${s.course}: ${e.message}`, 'err');
-                }
-            }
-
-            print(`\n完成！共注入 ${logCount} 筆 logs、${schCount} 筆 schedule。`, 'info');
-            print('請重新整理 app 頁面以查看效果。', 'info');
+            // ── 完成 ────────────────────────────────────────────────
+            print(`\n🎉 完成！共注入：`, 'info');
+            print(`   👤 ${seededIds.users.length} 個假教練用戶`, 'info');
+            print(`   📚 ${seededIds.courses.length} 個課程`, 'info');
+            print(`   📅 ${schCount} 個排課條目`, 'info');
+            print(`   📝 ${logCount} 筆打卡記錄`, 'info');
+            print('\n請重新整理 app 頁面以查看效果。', 'info');
             document.querySelectorAll('button').forEach(b => b.disabled = false);
         }
 
@@ -212,7 +404,7 @@
             print('清除測試資料…', 'info');
 
             let count = 0;
-            for (const col of ['logs', 'schedule']) {
+            for (const col of ['logs', 'schedule', 'courses', 'users']) {
                 const snap = await db.collection(col).get();
                 for (const doc of snap.docs) {
                     if (doc.id.startsWith('seed_')) {
