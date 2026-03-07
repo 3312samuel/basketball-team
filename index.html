@@ -18,14 +18,16 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-    <link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIuaVmeeWtOW8mSzmiYsiLAogICJzaG9ydF9uYW1lIjogIuaVmeeWtOW8mSzmiYsiLAogICJzdGFydF91cmwiOiAiLiIsCiAgImRpc3BsYXkiOiAiYnJvd3NlciIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiI2ZmZmZmZiIsCiAgInRoZW1lX2NvbG9yIjogIiNmZjZiMDAiCn0=">
     <style>
         :root { 
             --primary: #ff6b00; --dark: #2c2c2c; --light: #f7f7f7; --border: #e0e0e0;
             --blue: #2196f3; --blue-bg: #e3f2fd;
             --safe-bottom: env(safe-area-inset-bottom);
         }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        *:focus { outline: none; }
+        *:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+        html { scroll-behavior: smooth; overscroll-behavior-y: none; }
         a[x-apple-data-detectors] { color: inherit !important; text-decoration: none !important; font-size: inherit !important; font-family: inherit !important; font-weight: inherit !important; line-height: inherit !important; }
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
@@ -39,7 +41,7 @@
         .icon-sm { width: 16px; height: 16px; }
 
         /* Header */
-        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; position: sticky; top: 0; z-index: 500; background: rgba(247, 247, 247, 0.85); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); padding: 12px 20px; margin-left: -20px; margin-right: -20px; }
         h1 { margin: 0; font-size: 1.4em; font-weight: 800; letter-spacing: -0.5px; color: var(--dark); }
         select.header-select {
             width: auto; padding: 8px 30px 8px 12px; font-size: 0.9em; font-weight: 500;
@@ -58,10 +60,12 @@
             position: fixed; bottom: 0; left: 0; right: 0; background: white;
             display: flex; justify-content: space-around; align-items: center;
             padding: 10px 0 calc(10px + var(--safe-bottom)) 0;
-            border-top: 1px solid var(--border); z-index: 1000;
+            border-top: none; box-shadow: 0 -1px 0 rgba(0,0,0,0.04), 0 -8px 20px rgba(0,0,0,0.03); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); background: rgba(255,255,255,0.92); z-index: 1000;
         }
-        .nav-item { flex: 1; text-align: center; color: #bbb; padding: 5px; cursor: pointer; transition: color 0.2s; }
+        .nav-item { flex: 1; text-align: center; color: #bbb; padding: 5px; cursor: pointer; transition: color 0.2s; position: relative; }
         .nav-item.active { color: var(--primary); }
+        .nav-item.active::before { content: ''; position: absolute; top: -1px; left: 50%; transform: translateX(-50%); width: 20px; height: 3px; background: var(--primary); border-radius: 2px; }
+        .nav-item:active { transform: scale(0.9); }
         .nav-label { font-size: 10px; font-weight: 600; margin-top: 3px; display: block; }
         .tab-content { display: none; animation: fadeIn 0.2s ease-out; }
         .tab-content.active { display: block; }
@@ -91,7 +95,7 @@
         /* Ensure placeholders and values align vertically */
         input::-webkit-date-and-time-value { text-align: left; margin: 0; padding: 0; line-height: 50px; }
 
-        input:focus { border-color: var(--primary); background: white; }
+        input:focus { border-color: var(--primary); background: white; box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.1); }
         
         .btn-primary { 
             background: var(--primary); color: white; border: none; padding: 16px; 
@@ -132,7 +136,7 @@
         .record-card {
             background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px;
             display: flex; justify-content: space-between; align-items: center;
-            border-left: 4px solid var(--primary); border: 1px solid transparent;
+            border: 1px solid transparent; border-left: 4px solid var(--primary);
             box-shadow: 0 2px 8px rgba(0,0,0,0.02); position: relative;
         }
         .record-card.is-sub { border-left-color: var(--blue); }
@@ -158,12 +162,12 @@
             aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 4px;
             border-radius: 10px; font-size: 0.9em; position: relative; color: #555; font-weight: 500;
         }
-        .cal-cell.today { background: #fff8f2; color: var(--primary); font-weight: 800; border: 1px solid rgba(255, 107, 0, 0.3); }
-        .cal-cell.selected { background: var(--dark); color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.2); border: none; }
-        
+        .cal-cell.today { background: linear-gradient(135deg, #fff8f2, #fff3e8); color: var(--primary); font-weight: 800; border: 1.5px solid rgba(255, 107, 0, 0.3); box-shadow: 0 1px 4px rgba(255, 107, 0, 0.08); }
+        .cal-cell.selected { background: var(--dark); color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.2); border: none; transform: scale(1.05); }
+
         /* TimeTree Style Dots */
-        .dots-container { display: flex; gap: 2px; justify-content: center; position: absolute; bottom: 6px; width: 100%; px: 2px; flex-wrap: wrap; }
-        .dot { width: 4px; height: 4px; border-radius: 50%; }
+        .dots-container { display: flex; gap: 2px; justify-content: center; position: absolute; bottom: 6px; width: 100%; padding: 0 2px; flex-wrap: wrap; }
+        .dot { width: 5px; height: 5px; border-radius: 50%; }
         .dot.done { background: var(--primary); }
         .dot.sub { background: var(--blue); }
         .dot.future { background: #ccc; }
@@ -181,7 +185,6 @@
         .timeline-time { font-size: 0.85em; color: #888; font-weight: 600; margin-bottom: 4px; }
         .timeline-content { background: white; padding: 12px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); border: 1px solid var(--border); }
         
-        .today-btn-small { font-size: 0.7em; padding: 4px 10px; border: 1px solid var(--border); border-radius: 12px; background: white; margin-left: 10px; }
 
         /* Login Screen */
         #login-screen {
@@ -189,6 +192,7 @@
             display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 3000;
         }
         .login-card { text-align: center; padding: 40px; background: white; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 90%; max-width: 350px; }
+        .login-subtitle { color: #666; }
         .google-btn {
             background: white; border: 1px solid #ddd; color: #555; width: 100%; padding: 12px;
             border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 10px;
@@ -223,7 +227,7 @@
             width: 56px; height: 56px; background: var(--primary); color: white;
             border-radius: 50%; box-shadow: 0 4px 12px rgba(255, 107, 0, 0.4);
             display: flex; align-items: center; justify-content: center;
-            border: none; cursor: pointer; z-index: 900;
+            border: none; cursor: pointer; z-index: 1001;
         }
         .fab-btn svg { width: 28px; height: 28px; }
 
@@ -259,10 +263,9 @@
         .time-row .form-group { flex: 1; margin-bottom: 0; }
 
         /* Duration Quick Select (Mobile Optimized) */
-        .duration-chips { 
-            display: flex; gap: 8px; margin-bottom: 20px; margin-top: 8px; 
-            overflow-x: auto; padding: 4px 2px 10px 2px;
-            -webkit-overflow-scrolling: touch;
+        .duration-chips {
+            display: flex; gap: 8px; margin-bottom: 20px; margin-top: 8px;
+            padding: 4px 2px 10px 2px;
         }
         .duration-btn {
             font-size: 0.9em; padding: 10px 18px; /* Larger touch target */
@@ -309,6 +312,9 @@
             .print-table th { border-bottom: 1px solid #000; text-align: left; padding: 4px; }
             .print-table td { border-bottom: 1px solid #eee; padding: 6px 4px; }
             .print-total { margin-top: 20px; text-align: right; font-weight: bold; font-size: 16px; }
+            #boss-content .bottom-nav, #boss-content header, #boss-tab-schedule, #boss-tab-coaches { display: none !important; }
+            #boss-tab-report { display: block !important; }
+            #boss-content { display: block !important; }
         }
 
         /* Loading Overlay */
@@ -321,32 +327,54 @@
         @keyframes spin { to { transform: rotate(360deg); } }
 
         /* Toast */
-        .toast { position: fixed; bottom: calc(90px + var(--safe-bottom)); left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 12px 20px; border-radius: 20px; font-size: 0.9em; font-weight: 600; z-index: 3000; pointer-events: none; animation: fadeIn 0.2s ease-out; white-space: nowrap; }
+        .toast { position: fixed; bottom: calc(90px + var(--safe-bottom)); left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 12px 20px; border-radius: 20px; font-size: 0.9em; font-weight: 600; z-index: 3000; pointer-events: none; animation: toastIn 0.3s ease-out, toastOut 0.3s ease-in 2.2s forwards; white-space: nowrap; max-width: calc(100vw - 40px); }
+        @keyframes toastIn { from { transform: translateX(-50%) translateY(20px); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }
+        @keyframes toastOut { from { opacity: 1; } to { opacity: 0; } }
 
         /* Inline validation */
         input.field-error { border-color: #ff4444 !important; background: #fff5f5 !important; }
 
         /* Dark Mode */
-        @media (prefers-color-scheme: dark) {
-            :root { --light: #1a1a1a; --border: #3a3a3a; --dark: #f0f0f0; }
-            body { background: #1a1a1a; color: #f0f0f0; }
-            .card, .modal-card, .login-card { background: #2c2c2c; }
-            .bottom-nav { background: #2c2c2c; border-top-color: #3a3a3a; }
-            input, select { background: #333; color: #f0f0f0; border-color: #444; }
-            select option { background: #333; }
-            .record-card { background: #2c2c2c; box-shadow: none; border: 1px solid #3a3a3a; }
-            .timeline-content { background: #2c2c2c; border-color: #3a3a3a; }
-            .view-toggle { background: #333; }
-            .toggle-btn.active { background: #2c2c2c; }
-            .course-filters { background: #2c2c2c; border-color: #3a3a3a; }
-            .filter-chip { background: #333; color: #ccc; }
-            .month-selector { background: #2c2c2c; border-color: #3a3a3a; }
-            .btn-action { background: #2c2c2c; color: #ccc; border-color: #444; }
-            .btn-secondary { background: #333; color: #ccc; }
-            .checkbox-wrapper { background: #333; border-color: #444; }
-            input.field-error { background: #3a1a1a !important; }
-            #loadingOverlay { background: #1a1a1a; }
-        }
+        body.dark-mode { --light: #1a1a1a; --border: #3a3a3a; --dark: #f0f0f0; background: #1a1a1a; color: #f0f0f0; }
+        body.dark-mode .card, body.dark-mode .modal-card, body.dark-mode .login-card { background: #2c2c2c; }
+        body.dark-mode .bottom-nav { background: rgba(44,44,44,0.92); border-top-color: #3a3a3a; }
+        body.dark-mode header { background: rgba(26,26,26,0.85); }
+        body.dark-mode input, body.dark-mode select { background: #333; color: #f0f0f0; border-color: #444; }
+        body.dark-mode select option { background: #333; }
+        body.dark-mode .record-card { background: #2c2c2c; box-shadow: none; border: 1px solid #3a3a3a; }
+        body.dark-mode .timeline-content { background: #2c2c2c; border-color: #3a3a3a; }
+        body.dark-mode .view-toggle { background: #333; }
+        body.dark-mode .toggle-btn.active { background: #2c2c2c; }
+        body.dark-mode .course-filters { background: #2c2c2c; border-color: #3a3a3a; }
+        body.dark-mode .filter-chip { background: #333; color: #ccc; }
+        body.dark-mode .month-selector { background: #2c2c2c; border-color: #3a3a3a; }
+        body.dark-mode .btn-action { background: #2c2c2c; color: #ccc; border-color: #444; }
+        body.dark-mode .btn-secondary { background: #333; color: #ccc; }
+        body.dark-mode .checkbox-wrapper { background: #333; border-color: #444; }
+        body.dark-mode input.field-error { background: #3a1a1a !important; }
+        body.dark-mode #loadingOverlay { background: #1a1a1a; }
+        body.dark-mode .today-btn-small { background: #333; color: #f0f0f0; border-color: #444; }
+        body.dark-mode .google-btn { background: #333; color: #f0f0f0; border-color: #444; }
+        body.dark-mode .login-subtitle { color: #aaa; }
+        body.dark-mode input:focus { box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.15); background: #3a3a3a; }
+
+        /* Touch Feedback */
+        .record-card { transition: transform 0.1s ease; }
+        .record-card:active { transform: scale(0.98); }
+        .cal-cell { transition: all 0.15s ease; cursor: pointer; }
+        .cal-cell:active { transform: scale(0.92); }
+        .btn-primary:active { transform: scale(0.97); opacity: 0.9; }
+        .btn-action:active { transform: scale(0.95); }
+        .filter-chip:active { transform: scale(0.94); }
+        .google-btn:active { transform: scale(0.97); background: #f5f5f5; }
+        .fab-btn { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .fab-btn:active { transform: scale(0.88); box-shadow: 0 2px 6px rgba(255,107,0,0.3); }
+        .month-selector { transition: transform 0.1s ease; }
+        .month-selector:active { transform: scale(0.98); }
+        .month-grid-item { transition: all 0.15s ease; }
+        .month-grid-item:active { transform: scale(0.94); }
+
+        @keyframes cardSlideIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
@@ -354,7 +382,7 @@
     <div id="login-screen">
         <div class="login-card">
             <h1 style="color:var(--primary); margin-bottom:10px;">教練助手</h1>
-            <p style="color:#666; margin-bottom:30px;">請登入以同步您的專屬行程</p>
+            <p class="login-subtitle" style="margin-bottom:30px;">請登入以同步您的專屬行程</p>
             <button class="google-btn" onclick="login()">
                 <svg width="18" height="18" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.637-.057-1.252-.164-1.841H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.715H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.448 2.797 1.237 3.917l2.727-2.207z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.159 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
                 Google 登入
@@ -366,6 +394,7 @@
         <header>
             <h1>教練助手</h1>
             <div style="display:flex; gap:10px; align-items:center;">
+                <button id="darkModeToggle" onclick="toggleDarkMode()" style="background:none; border:none; cursor:pointer; padding:6px; color:var(--dark); font-size:1.2em;">🌙</button>
                 <select id="filterBoss" class="header-select" onchange="updateUI()">
                     <option value="all">全部付款人</option>
                 </select>
@@ -417,7 +446,7 @@
             <div style="color:var(--primary); font-size:0.9em; font-weight:700;">更改 &gt;</div>
         </div>
 
-        <div class="card" style="background:var(--dark); color:white;">
+        <div class="card" style="background:linear-gradient(135deg, #2c2c2c 0%, #3a3a3a 100%); color:white;">
             <div style="display:flex; justify-content:space-between; margin-bottom:10px; opacity:0.8; font-size:0.9em;">
                 <span>總結</span>
                 <svg class="icon" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
@@ -551,8 +580,11 @@
         <div id="boss-tab-schedule" class="tab-content active">
             <header>
                 <h1>排課管理</h1>
-                <div class="user-profile" onclick="logout()">
-                    <img id="bossAvatar" class="user-avatar" src="" alt="">
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <button id="bossDarkModeToggle" onclick="toggleDarkMode()" style="background:none; border:none; cursor:pointer; padding:6px; color:var(--dark); font-size:1.2em;">🌙</button>
+                    <div class="user-profile" onclick="logout()">
+                        <img id="bossAvatar" class="user-avatar" src="" alt="">
+                    </div>
                 </div>
             </header>
             <div class="month-selector">
@@ -696,11 +728,14 @@
         let allCoaches = []; // populated for boss view
 
         // --- 初始化 ---
-        document.getElementById('dateInput').valueAsDate = new Date();
+        const _todayForInput = new Date();
+        const _inputOffset = _todayForInput.getTimezoneOffset() * 60000;
+        document.getElementById('dateInput').value = new Date(_todayForInput.getTime() - _inputOffset).toISOString().split('T')[0];
 
         // --- Authentication Logic ---
         auth.onAuthStateChanged(async user => {
             if (user) {
+                try {
                 currentUser = user;
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('userAvatar').src = user.photoURL || '';
@@ -725,6 +760,11 @@
                 } else {
                     initCoachView();
                 }
+                } catch (err) {
+                    console.error('Auth init error:', err);
+                    hideLoading();
+                    showToast('初始化失敗，請重新整理頁面');
+                }
             } else {
                 currentUser = null;
                 userRole = 'coach';
@@ -746,22 +786,22 @@
             if (bossEl) bossEl.style.display = 'none';
             showLoading();
 
-            let initialLoaded = false;
-            const checkFirstLoad = () => { if (!initialLoaded) { initialLoaded = true; hideLoading(); } };
+            let loadedCount = 0;
+            const checkFirstLoad = () => { if (++loadedCount >= 2) hideLoading(); };
 
             unsubscribeLogs = db.collection('logs').where('uid', '==', currentUser.uid)
                 .onSnapshot(snapshot => {
                     logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     checkFirstLoad();
                     updateUI();
-                });
+                }, err => { console.error('Logs listener error:', err); checkFirstLoad(); });
 
             unsubscribeSchedule = db.collection('schedule').where('assignedToUid', '==', currentUser.uid)
                 .onSnapshot(snapshot => {
                     schedule = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     checkFirstLoad();
                     updateUI();
-                });
+                }, err => { console.error('Schedule listener error:', err); checkFirstLoad(); });
 
             // Load boss list from users collection
             db.collection('users').where('role', '==', 'boss').get().then(snap => {
@@ -794,7 +834,7 @@
 
         function switchTab(tabName, el) {
             currentTab = tabName;
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('#app-content .tab-content').forEach(c => c.classList.remove('active'));
             document.getElementById('tab-' + tabName).classList.add('active');
             if (el) {
                 document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -916,7 +956,7 @@
             let total = 0; let bMap = {};
 
             if(filteredLogs.length === 0){ 
-                container.innerHTML='<div style="text-align:center;color:#bbb;padding:40px;">無符合記錄</div>'; 
+                container.innerHTML='<div style="text-align:center;padding:60px 20px;color:#ccc;"><svg width="48" height="48" viewBox="0 0 24 24" fill="#e0e0e0" style="margin-bottom:12px;"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 9h-2v2H9v-2H7v-2h2V7h2v2h2v2zm-2 7H8v-2h3v2zm5 0h-3v-2h3v2zm0-4H8v-2h8v2zm-1-7V3.5L18.5 9H13z"/></svg><div style="font-size:0.95em;font-weight:600;">尚無記錄</div><div style="font-size:0.8em;margin-top:4px;">此月份暫無符合的記錄</div></div>';
                 document.getElementById('totalHours').innerText="0.0";
                 renderPrintView([]);
                 return; 
@@ -977,8 +1017,8 @@
                 <div class="print-header">
                     <div class="print-title">${titleStr}</div>
                     <div class="print-meta">
-                        <div style="font-weight:700;">付款人: ${displayBoss}</div>
-                        <div style="font-size:0.9em; margin:2px 0;">課程: ${courseList}</div>
+                        <div style="font-weight:700;">付款人: ${esc(displayBoss)}</div>
+                        <div style="font-size:0.9em; margin:2px 0;">課程: ${esc(courseList)}</div>
                         <div style="font-weight:700;">總計: ${totalH} hr</div>
                     </div>
                 </div>
@@ -1030,16 +1070,16 @@
             const sortedForPrint = [...logs].sort((a,b)=>new Date(a.date)-new Date(b.date) || a.start.localeCompare(b.start));
             
             sortedForPrint.forEach(l => {
-                const dObj = new Date(l.date);
+                const dObj = new Date(l.date + 'T00:00:00');
                 const dayMap = ['日','一','二','三','四','五','六'];
                 const dateTxt = `${dObj.getMonth()+1}/${dObj.getDate()} (${dayMap[dObj.getDay()]})`;
                 html += `
                     <tr>
                         <td>${dateTxt}</td>
-                        <td>${l.start}-${l.end}</td>
-                        <td>${l.location || '-'}</td>
-                        <td>${l.course||''} ${l.isSub?'(代)':''} ${l.note||''}</td>
-                        <td style="text-align:right">${l.hours}</td>
+                        <td>${esc(l.start)}-${esc(l.end)}</td>
+                        <td>${esc(l.location || '-')}</td>
+                        <td>${esc(l.course||'')} ${l.isSub?'(代)':''} ${esc(l.note||'')}</td>
+                        <td style="text-align:right">${esc(l.hours)}</td>
                     </tr>
                 `;
             });
@@ -1156,7 +1196,7 @@
         function renderSelectedDateInfo() {
             const container = document.getElementById('selectedDateInfo');
             const filter = document.getElementById('filterBoss').value;
-            const dayOfWeek = new Date(selectedDate).getDay();
+            const dayOfWeek = new Date(selectedDate + 'T00:00:00').getDay();
             
             const todayLogs = logs.filter(l => l.date === selectedDate && (filter === 'all' || l.boss === filter));
             // Recurring
@@ -1264,7 +1304,6 @@
             });
             if(!_valid) return;
 
-            const newId = Date.now().toString();
             const _bossList = document.getElementById('bossList');
             const _bossOption = _bossList ? Array.from(_bossList.options).find(o => o.value === b) : null;
             const bossUid = _bossOption ? _bossOption.getAttribute('data-uid') : null;
@@ -1276,7 +1315,7 @@
             };
 
             try {
-                await db.collection("schedule").doc(newId).set(data);
+                await db.collection("schedule").add(data);
                 closeOneOffModal();
             } catch (err) { alert("同步失敗: " + err); }
         }
@@ -1318,19 +1357,18 @@
             if(!item) { alert("找不到行程: " + id); return; }
             
             const h = calculateHours(item.start, item.end);
-            const newId = Date.now().toString();
             const _bossList = document.getElementById('bossList');
             const _bossOption = _bossList ? Array.from(_bossList.options).find(o => o.value === item.boss) : null;
             const bossUid = _bossOption ? _bossOption.getAttribute('data-uid') : null;
             const data = {
                 uid: currentUser.uid, // 加入使用者 ID
-                date, boss:item.boss, course:item.course, location:item.location || '', 
+                date, boss:item.boss, course:item.course, location:item.location || '',
                 start:item.start, end:item.end, note:item.note || '', hours:h, isSub:false,
                 bossUid: bossUid || null,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             };
             try {
-                await db.collection("logs").doc(newId).set(data);
+                await db.collection("logs").add(data);
                 // 成功後給予用戶回饋，例如刷新當前視圖
                 renderSelectedDateInfo();
             } catch (err) { alert("打卡失敗: " + err); }
@@ -1347,8 +1385,6 @@
             });
             if(!valid) return;
             
-            const newId = Date.now().toString(); // 使用時間戳作為文檔 ID
-
             // Resolve bossUid from datalist
             const _bossList = document.getElementById('bossList');
             const _bossOption = _bossList ? Array.from(_bossList.options).find(o => o.value === b) : null;
@@ -1364,10 +1400,10 @@
             };
 
             try {
-                await db.collection("logs").doc(newId).set(data);
+                await db.collection("logs").add(data);
                 document.getElementById('isSubInput').checked = false;
                 showToast(`已成功記錄 ${data.hours} 小時`);
-                switchTab('list'); // 儲存後自動跳轉
+                switchTab('list', document.querySelector('.bottom-nav .nav-item:nth-child(2)')); // 儲存後自動跳轉
             } catch (err) { alert("同步失敗: " + err); }
         }
         async function addTimetableEntry() {
@@ -1383,7 +1419,7 @@
             
             const data = {
                 uid: currentUser.uid, // 加入使用者 ID
-                day: d, start: s, end: e, boss: b, 
+                day: parseInt(d, 10), start: s, end: e, boss: b,
                 course: document.getElementById('ttCourse').value, location: loc,
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
@@ -1393,8 +1429,7 @@
                     await db.collection("schedule").doc(currentEditingId.toString()).update(data);
                     resetScheduleForm();
                 } else {
-                    const newId = Date.now().toString();
-                    await db.collection("schedule").doc(newId).set(data);
+                    await db.collection("schedule").add(data);
                 }
                 setScheduleView('calendar'); // 儲存後跳回日曆
             } catch (err) { alert("同步失敗: " + err); }
@@ -1425,8 +1460,10 @@
             currentEditingId = null;
             ['ttStart','ttEnd','ttBoss','ttCourse','ttLocation'].forEach(id => document.getElementById(id).value = '');
             const btn = document.querySelector('#view-list .btn-primary');
-            btn.innerHTML = `<svg class="icon" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg> 加入課表`;
-            btn.style.background = ''; // Reset color
+            if (btn) {
+                btn.innerHTML = `<svg class="icon" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg> 加入課表`;
+                btn.style.background = '';
+            }
         }
         
         async function deleteLog(id) {
@@ -1482,7 +1519,7 @@
             locations.forEach(l=>document.getElementById('locationList').innerHTML+=`<option value="${esc(l)}">`);
             if(bosses.includes(cur))sel.value=cur;
         }
-        function exportData(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({logs,schedule})]));a.download=`backup.json`;document.body.appendChild(a);a.click();a.remove();}
+        function exportData(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({logs,schedule})]));a.download=`backup_${new Date().toISOString().slice(0,10)}.json`;document.body.appendChild(a);a.click();setTimeout(() => URL.revokeObjectURL(a.href), 100);a.remove();}
         function exportCSV() {
             const header = ['日期','付款人','課程','地點','開始','結束','時數','代課','備註'];
             const rows = logs
@@ -1494,7 +1531,7 @@
             const a = document.createElement('a');
             a.href = URL.createObjectURL(new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'}));
             a.download = `教練記錄_${selectedMonths.join('_')}.csv`;
-            document.body.appendChild(a); a.click(); a.remove();
+            document.body.appendChild(a); a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 100); a.remove();
         }
         async function importData(i) {
             if(!currentUser) return;
@@ -1508,7 +1545,7 @@
                         d.logs.forEach(log => {
                             const { id, ...data } = log;
                             data.uid = currentUser.uid;
-                            const ref = db.collection('logs').doc(id || Date.now().toString() + count);
+                            const ref = db.collection('logs').doc();
                             batch.set(ref, data, { merge: true });
                             count++;
                         });
@@ -1517,7 +1554,7 @@
                         d.schedule.forEach(sch => {
                             const { id, ...data } = sch;
                             data.uid = currentUser.uid;
-                            const ref = db.collection('schedule').doc(id || Date.now().toString() + count);
+                            const ref = db.collection('schedule').doc();
                             batch.set(ref, data, { merge: true });
                             count++;
                         });
@@ -1684,7 +1721,7 @@
             const sel = document.getElementById('bossCoachSelect');
             if (!sel) return;
             sel.innerHTML = allCoaches.map(c =>
-                `<option value="${c.uid}">${c.name || c.email}</option>`
+                `<option value="${c.uid}">${esc(c.name || c.email)}</option>`
             ).join('');
         }
 
@@ -1836,7 +1873,7 @@
 
             if (filteredLogs.length === 0) {
                 el.innerHTML =
-                    '<p style="color:#999;text-align:center;padding:40px 20px;font-size:0.95em">所選月份（' + bossSelectedMonths.join(', ') + '）沒有記錄</p>';
+                    '<p style="color:#999;text-align:center;padding:40px 20px;font-size:0.95em">所選月份（' + esc(bossSelectedMonths.join(', ')) + '）沒有記錄</p>';
                 return;
             }
 
@@ -1900,10 +1937,24 @@
         window.addEventListener('offline', () => showToast('目前離線，部分功能可能不可用'));
         window.addEventListener('online', () => showToast('已重新連線'));
 
-        // --- Service Worker 註冊 ---
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').catch(() => {});
+        // --- Dark Mode Toggle ---
+        function toggleDarkMode() {
+            const isDark = document.body.classList.toggle('dark-mode');
+            localStorage.setItem('darkMode', isDark ? 'on' : 'off');
+            document.getElementById('darkModeToggle').textContent = isDark ? '☀️' : '🌙';
+            const bossToggle = document.getElementById('bossDarkModeToggle');
+            if (bossToggle) bossToggle.textContent = isDark ? '☀️' : '🌙';
         }
+        // Init dark mode from localStorage or system preference
+        (function() {
+            const saved = localStorage.getItem('darkMode');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (saved === 'on' || (saved === null && prefersDark)) {
+                document.body.classList.add('dark-mode');
+                const btn = document.getElementById('darkModeToggle');
+                if (btn) btn.textContent = '☀️';
+            }
+        })();
 
     </script>
 </body>
