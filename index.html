@@ -297,7 +297,7 @@
             /* === Coach mode print === */
             body.print-coach #boss-content { display: none !important; }
             body.print-coach #app-content { display: block !important; }
-            body.print-coach #tab-home, body.print-coach #tab-schedule { display: none !important; }
+            body.print-coach #tab-schedule { display: none !important; }
             body.print-coach #tab-list { display: block !important; }
             body.print-coach #logListContainer { display: none !important; }
             body.print-coach .card { display: none !important; }
@@ -306,7 +306,7 @@
             /* === Boss mode print === */
             body.print-boss #app-content { display: none !important; }
             body.print-boss #boss-content { display: block !important; }
-            body.print-boss #boss-tab-schedule, body.print-boss #boss-tab-coaches { display: none !important; }
+            body.print-boss #boss-tab-courses, body.print-boss #boss-tab-coaches { display: none !important; }
             body.print-boss #boss-tab-report { display: block !important; }
             body.print-boss #boss-content header { display: none !important; }
             body.print-boss #boss-content .bottom-nav { display: none !important; }
@@ -398,6 +398,213 @@
         .month-grid-item:active { transform: scale(0.94); }
 
         @keyframes cardSlideIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ===== Course Management Styles ===== */
+        .course-card {
+            background: white; border-radius: 16px; padding: 18px; margin-bottom: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.04); border: 1px solid var(--border);
+            cursor: pointer; transition: transform 0.1s ease;
+        }
+        .course-card:active { transform: scale(0.98); }
+        .course-card-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .course-card-name { font-weight: 800; font-size: 1.1em; color: var(--dark); }
+        .course-card-time { font-size: 0.85em; color: #888; margin-top: 4px; }
+        .course-card-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+        .course-status-badge {
+            font-size: 0.7em; padding: 2px 8px; border-radius: 10px; font-weight: 700;
+        }
+        .course-status-badge.active { background: #e8f5e9; color: #4caf50; }
+        .course-status-badge.archived { background: #f5f5f5; color: #999; }
+        .coach-chip {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-size: 0.78em; padding: 3px 10px; border-radius: 12px;
+            background: var(--blue-bg); color: var(--blue); font-weight: 600;
+        }
+        .coach-chip img { width: 18px; height: 18px; border-radius: 50%; object-fit: cover; }
+        .date-summary {
+            font-size: 0.8em; color: #999; margin-top: 8px;
+            display: flex; align-items: center; gap: 4px;
+        }
+
+        /* Course Status Filters */
+        .status-filters {
+            display: flex; gap: 8px; margin-bottom: 15px;
+        }
+        .status-chip {
+            font-size: 0.82em; padding: 6px 14px; border-radius: 20px;
+            background: #f0f0f0; color: #666; cursor: pointer; font-weight: 600;
+            border: 1px solid transparent; transition: all 0.2s; user-select: none;
+        }
+        .status-chip.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .status-chip:active { transform: scale(0.94); }
+
+        /* Course Modal (full-screen on mobile) */
+        .course-modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); z-index: 2000; display: none;
+            align-items: flex-start; justify-content: center; padding: 0;
+            backdrop-filter: blur(2px); overflow-y: auto;
+        }
+        .course-modal-card {
+            background: white; width: 100%; max-width: 500px;
+            border-radius: 0 0 20px 20px; padding: 20px 20px calc(20px + var(--safe-bottom));
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            animation: modalSlideDown 0.25s ease-out;
+            max-height: 100vh; overflow-y: auto;
+        }
+        @keyframes modalSlideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .course-modal-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px; position: sticky; top: 0; background: white; padding: 5px 0; z-index: 1;
+        }
+        .course-modal-title { font-size: 1.2em; font-weight: 800; }
+        .course-modal-close {
+            background: none; border: none; font-size: 1.5em; color: #999;
+            cursor: pointer; padding: 5px 10px; line-height: 1;
+        }
+        .course-section { margin-bottom: 20px; }
+        .course-section-title {
+            font-size: 0.85em; font-weight: 700; color: var(--primary);
+            margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+
+        /* Coach Multi-Select */
+        .coach-select-list { display: flex; flex-wrap: wrap; gap: 8px; }
+        .coach-select-item {
+            display: flex; align-items: center; gap: 6px;
+            padding: 8px 14px; border-radius: 20px;
+            background: #f5f5f5; border: 1.5px solid var(--border);
+            cursor: pointer; font-size: 0.88em; font-weight: 600;
+            transition: all 0.15s; user-select: none; color: #666;
+        }
+        .coach-select-item.selected {
+            background: var(--blue-bg); border-color: var(--blue); color: var(--blue);
+        }
+        .coach-select-item:active { transform: scale(0.95); }
+        .coach-select-item img { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
+
+        /* Date Picker Calendar Grid */
+        .date-mode-toggle {
+            display: flex; background: #eaeaea; border-radius: 10px; padding: 3px; margin-bottom: 12px;
+        }
+        .date-mode-btn {
+            flex: 1; padding: 8px; text-align: center; border-radius: 8px;
+            font-size: 0.85em; font-weight: 600; color: #777; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .date-mode-btn.active { background: white; color: var(--primary); box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+
+        .date-picker-cal {
+            display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center;
+        }
+        .dp-day-name { font-size: 0.7em; color: #bbb; font-weight: 600; padding: 4px 0; }
+        .dp-cell {
+            aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+            border-radius: 8px; font-size: 0.82em; cursor: pointer; color: #555;
+            transition: all 0.1s; font-weight: 500; position: relative;
+        }
+        .dp-cell:hover { background: #f0f0f0; }
+        .dp-cell.dp-selected { background: var(--primary); color: white; font-weight: 700; }
+        .dp-cell.dp-today { border: 1.5px solid var(--primary); }
+        .dp-cell.dp-empty { cursor: default; }
+        .dp-cell:active { transform: scale(0.9); }
+
+        .selected-dates-tags {
+            display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; max-height: 120px; overflow-y: auto;
+        }
+        .date-tag {
+            font-size: 0.75em; padding: 4px 10px; border-radius: 12px;
+            background: #fff3e0; color: #e65100; font-weight: 600;
+            display: inline-flex; align-items: center; gap: 4px;
+        }
+        .date-tag-remove {
+            cursor: pointer; font-size: 1.1em; line-height: 1; color: #ff9800;
+            margin-left: 2px;
+        }
+
+        /* Weekday selector */
+        .weekday-selector { display: flex; gap: 6px; margin-bottom: 10px; }
+        .weekday-btn {
+            flex: 1; aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+            border-radius: 50%; font-size: 0.82em; font-weight: 600;
+            background: #f5f5f5; color: #666; border: 1.5px solid var(--border);
+            cursor: pointer; transition: all 0.15s;
+        }
+        .weekday-btn.selected { background: var(--blue); color: white; border-color: var(--blue); }
+        .weekday-btn:active { transform: scale(0.9); }
+
+        .course-save-summary {
+            background: #f0f7ff; border-radius: 12px; padding: 14px; margin-bottom: 15px;
+            font-size: 0.9em; color: #1565c0; text-align: center; font-weight: 600;
+        }
+
+        /* Course Detail View */
+        .course-detail-header {
+            background: linear-gradient(135deg, #2c2c2c 0%, #3a3a3a 100%);
+            color: white; padding: 20px; border-radius: 16px; margin-bottom: 15px;
+        }
+        .course-detail-name { font-size: 1.3em; font-weight: 800; margin-bottom: 8px; }
+        .course-detail-info { font-size: 0.85em; opacity: 0.8; line-height: 1.6; }
+
+        .date-coach-grid { margin-bottom: 15px; }
+        .date-row {
+            background: white; border-radius: 12px; padding: 12px 14px; margin-bottom: 8px;
+            border: 1px solid var(--border);
+        }
+        .date-row-header {
+            font-weight: 700; font-size: 0.95em; color: var(--dark); margin-bottom: 8px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .date-row-coaches { display: flex; flex-wrap: wrap; gap: 6px; }
+        .coach-status-chip {
+            display: inline-flex; align-items: center; gap: 5px;
+            font-size: 0.8em; padding: 5px 12px; border-radius: 16px;
+            font-weight: 600; cursor: pointer; transition: all 0.15s;
+        }
+        .coach-status-chip.checked-in { background: #e8f5e9; color: #2e7d32; }
+        .coach-status-chip.pending { background: #fff3e0; color: #e65100; }
+        .coach-status-chip.is-sub { background: var(--blue-bg); color: var(--blue); }
+        .coach-status-chip:active { transform: scale(0.95); }
+
+        /* Sub Coach Modal */
+        .sub-coach-list { max-height: 300px; overflow-y: auto; }
+        .sub-coach-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 12px; border-radius: 10px; cursor: pointer;
+            transition: background 0.15s; margin-bottom: 4px;
+        }
+        .sub-coach-item:hover { background: #f5f5f5; }
+        .sub-coach-item:active { background: #eee; }
+        .sub-coach-item img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
+
+        /* Dark mode additions for course management */
+        body.dark-mode .course-card { background: #2c2c2c; border-color: #3a3a3a; }
+        body.dark-mode .course-card-name { color: #f0f0f0; }
+        body.dark-mode .status-chip { background: #333; color: #ccc; }
+        body.dark-mode .status-chip.active { background: var(--primary); color: white; }
+        body.dark-mode .course-modal-card { background: #2c2c2c; }
+        body.dark-mode .course-modal-header { background: #2c2c2c; }
+        body.dark-mode .course-modal-title { color: #f0f0f0; }
+        body.dark-mode .coach-select-item { background: #333; color: #ccc; border-color: #444; }
+        body.dark-mode .coach-select-item.selected { background: rgba(33,150,243,0.15); color: var(--blue); border-color: var(--blue); }
+        body.dark-mode .date-mode-toggle { background: #333; }
+        body.dark-mode .date-mode-btn.active { background: #2c2c2c; }
+        body.dark-mode .dp-cell { color: #ccc; }
+        body.dark-mode .dp-cell:hover { background: #3a3a3a; }
+        body.dark-mode .dp-cell.dp-selected { background: var(--primary); color: white; }
+        body.dark-mode .date-tag { background: #3a2a1a; color: #ffab40; }
+        body.dark-mode .weekday-btn { background: #333; color: #ccc; border-color: #444; }
+        body.dark-mode .weekday-btn.selected { background: var(--blue); color: white; border-color: var(--blue); }
+        body.dark-mode .course-save-summary { background: #1a2a3a; color: #64b5f6; }
+        body.dark-mode .course-detail-header { background: linear-gradient(135deg, #1a1a1a 0%, #2c2c2c 100%); }
+        body.dark-mode .date-row { background: #2c2c2c; border-color: #3a3a3a; }
+        body.dark-mode .date-row-header { color: #f0f0f0; }
+        body.dark-mode .coach-status-chip.checked-in { background: rgba(76,175,80,0.15); color: #81c784; }
+        body.dark-mode .coach-status-chip.pending { background: rgba(255,152,0,0.15); color: #ffb74d; }
+        body.dark-mode .sub-coach-item:hover { background: #333; }
+        body.dark-mode .sub-coach-item:active { background: #3a3a3a; }
+        body.dark-mode .course-status-badge.active { background: rgba(76,175,80,0.15); color: #81c784; }
+        body.dark-mode .course-status-badge.archived { background: #333; color: #888; }
     </style>
 </head>
 <body>
@@ -427,40 +634,8 @@
             </div>
         </header>
 
-        <div id="tab-home" class="tab-content active">
-        <div class="card input-section">
-            <div class="form-group"><label>日期</label><input type="date" id="dateInput"></div>
-            <div class="form-group"><label>付款人 (Payer)</label><input type="text" id="bossInput" placeholder="輸入名稱..." list="bossList"></div>
-            <div class="form-group"><label>課程 (Course)</label><input type="text" id="courseInput" placeholder="課程名稱..." list="courseList"></div>
-            <div class="form-group"><label>地點 (Location)</label><input type="text" id="locationInput" placeholder="輸入地點..." list="locationList"></div>
-            <div class="time-row">
-                <div class="form-group"><label>開始</label><input type="time" id="startTime"></div>
-                <div class="form-group"><label>結束</label><input type="time" id="endTime"></div>
-            </div>
-            <div class="duration-chips">
-                <div class="duration-btn" onclick="calcEnd('startTime','endTime',60)">+1 hr</div>
-                <div class="duration-btn" onclick="calcEnd('startTime','endTime',90)">+1.5 hr</div>
-                <div class="duration-btn" onclick="calcEnd('startTime','endTime',120)">+2 hr</div>
-            </div>
-            
-            <label class="checkbox-wrapper">
-                <span class="checkbox-label">代其他同事課 (Substitute)</span>
-                <div class="toggle-switch">
-                    <input type="checkbox" id="isSubInput">
-                    <span class="slider"></span>
-                </div>
-            </label>
-
-            <div class="form-group"><label>備註</label><input type="text" id="noteInput" placeholder="選填..."></div>
-            
-            <button class="btn-primary" onclick="addLogEntry()">
-                <svg class="icon" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> 確認記錄
-            </button>
-        </div>
-    </div>
-
     <div id="tab-list" class="tab-content">
-        
+
         <div class="month-selector" onclick="openMonthPicker()" style="cursor: pointer;">
             <div style="display:flex; align-items:center; gap:8px;">
                 <svg class="icon" viewBox="0 0 24 24"><path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/></svg>
@@ -490,61 +665,26 @@
         </div>
     </div>
 
-    <div id="tab-schedule" class="tab-content">
-        <div style="text-align:center;">
-            <div class="view-toggle">
-                <div class="toggle-btn active" onclick="setScheduleView('calendar')" id="btn-view-cal">日曆</div>
-                <div class="toggle-btn" onclick="setScheduleView('list')" id="btn-view-list">設定課表</div>
+    <div id="tab-schedule" class="tab-content active">
+        <div class="card">
+            <div class="calendar-header">
+                <div onclick="changeCalMonth(-1)" style="cursor:pointer; padding:10px;"><svg class="icon" viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></div>
+                <span id="calMonthTitle"></span>
+                <div onclick="changeCalMonth(1)" style="cursor:pointer; padding:10px;"><svg class="icon" viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></div>
             </div>
+            <div class="calendar-grid" id="calendarGrid"></div>
         </div>
-        <div id="view-calendar">
-            <div class="card">
-                <div class="calendar-header">
-                    <div onclick="changeCalMonth(-1)" style="cursor:pointer; padding:10px;"><svg class="icon" viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></div>
-                    <span id="calMonthTitle"></span>
-                    <div onclick="changeCalMonth(1)" style="cursor:pointer; padding:10px;"><svg class="icon" viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></div>
-                </div>
-                <div class="calendar-grid" id="calendarGrid"></div>
-            </div>
-            <div id="selectedDateInfo"></div>
-            <button class="fab-btn" onclick="openOneOffModal()">
-                <svg class="icon" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-            </button>
-        </div>
-        <div id="view-list" style="display:none;">
-            <div class="card">
-                <div class="form-group"><label>星期</label><select id="ttDay"><option value="1">週一</option><option value="2">週二</option><option value="3">週三</option><option value="4">週四</option><option value="5">週五</option><option value="6">週六</option><option value="0">週日</option></select></div>
-                <div class="time-row">
-                    <div class="form-group"><input type="time" id="ttStart"></div>
-                    <div class="form-group"><input type="time" id="ttEnd"></div>
-                </div>
-                <div class="duration-chips">
-                    <div class="duration-btn" onclick="calcEnd('ttStart','ttEnd',60)">+1 hr</div>
-                    <div class="duration-btn" onclick="calcEnd('ttStart','ttEnd',90)">+1.5 hr</div>
-                    <div class="duration-btn" onclick="calcEnd('ttStart','ttEnd',120)">+2 hr</div>
-                </div>
-                <div class="form-group"><input type="text" id="ttBoss" placeholder="付款人"></div>
-                <div class="form-group"><input type="text" id="ttCourse" placeholder="課程"></div>
-                <div class="form-group"><input type="text" id="ttLocation" placeholder="地點"></div>
-                <button class="btn-primary" onclick="addTimetableEntry()"><svg class="icon" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg> 加入課表</button>
-                <button class="btn-action" style="width:100%; margin-top:10px; border-radius:12px; padding:12px; justify-content:center;" onclick="setScheduleView('calendar')">返回日曆檢視</button>
-            </div>
-            <div id="timetableContainer"></div>
-        </div>
+        <div id="selectedDateInfo"></div>
     </div>
 
     <div class="bottom-nav">
-        <div class="nav-item active" onclick="switchTab('home', this)">
-            <svg class="icon-lg" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-            <span class="nav-label">記錄</span>
+        <div class="nav-item active" onclick="switchTab('schedule', this)">
+            <svg class="icon-lg" viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"/></svg>
+            <span class="nav-label">日程</span>
         </div>
         <div class="nav-item" onclick="switchTab('list', this)">
             <svg class="icon-lg" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
             <span class="nav-label">報表</span>
-        </div>
-        <div class="nav-item" onclick="switchTab('schedule', this)">
-            <svg class="icon-lg" viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"/></svg>
-            <span class="nav-label">日程</span>
         </div>
     </div>
     </div> <!-- End of #app-content -->
@@ -553,29 +693,6 @@
 
     <input type="file" id="importFile" style="display: none" onchange="importData(this)">
     <datalist id="bossList"></datalist> <datalist id="courseList"></datalist> <datalist id="locationList"></datalist>
-
-    <!-- Modal for One-off Event -->
-    <div id="oneOffModal" class="modal-overlay" onclick="if(event.target===this)closeOneOffModal()">
-        <div class="modal-card">
-            <div class="modal-title">新增單次行程 (<span id="modalDateLabel"></span>)</div>
-            <div class="time-row">
-                <div class="form-group"><input type="time" id="moStart"></div>
-                <div class="form-group"><input type="time" id="moEnd"></div>
-            </div>
-            <div class="duration-chips">
-                <div class="duration-btn" onclick="calcEnd('moStart','moEnd',60)">+1 hr</div>
-                <div class="duration-btn" onclick="calcEnd('moStart','moEnd',90)">+1.5 hr</div>
-                <div class="duration-btn" onclick="calcEnd('moStart','moEnd',120)">+2 hr</div>
-            </div>
-            <div class="form-group"><input type="text" id="moBoss" placeholder="付款人" list="bossList"></div>
-            <div class="form-group"><input type="text" id="moCourse" placeholder="課程" list="courseList"></div>
-            <div class="form-group"><input type="text" id="moLocation" placeholder="地點" list="locationList"></div>
-            <div class="modal-actions">
-                <button class="btn-secondary" onclick="closeOneOffModal()">取消</button>
-                <button class="btn-primary" onclick="saveOneOffEntry()" style="flex:2">儲存</button>
-            </div>
-        </div>
-    </div>
 
     <!-- Modal for Month Picker -->
     <div id="monthPickerModal" class="modal-overlay" onclick="if(event.target===this)closeMonthPicker()">
@@ -599,10 +716,10 @@
 
     <!-- ===== BOSS VIEW ===== -->
     <div id="boss-content" style="display:none">
-        <!-- Tab: 排課 -->
-        <div id="boss-tab-schedule" class="tab-content active">
+        <!-- Tab: 課程 -->
+        <div id="boss-tab-courses" class="tab-content active">
             <header>
-                <h1>排課管理</h1>
+                <h1>課程管理</h1>
                 <div style="display:flex; gap:10px; align-items:center;">
                     <button id="bossDarkModeToggle" onclick="toggleDarkMode()" style="background:none; border:none; cursor:pointer; padding:6px; color:var(--dark); font-size:1.2em;">🌙</button>
                     <div class="user-profile" onclick="logout()">
@@ -610,15 +727,12 @@
                     </div>
                 </div>
             </header>
-            <div class="month-selector">
-                <button class="month-btn" onclick="bossCalPrev()">&#8249;</button>
-                <span class="month-label" id="bossCalLabel"></span>
-                <button class="month-btn" onclick="bossCalNext()">&#8250;</button>
+            <div id="courseListView">
+                <div class="status-filters" id="courseStatusFilters"></div>
+                <div id="courseListContainer"></div>
             </div>
-            <div class="calendar-grid" id="bossCalDayNames"></div>
-            <div class="calendar-grid" id="bossCalGrid"></div>
-            <div id="bossCalDetail" style="margin-top:15px"></div>
-            <button class="fab-btn" id="bossFab" onclick="openBossScheduleModal(null)" style="display:none">
+            <div id="courseDetailView" style="display:none"></div>
+            <button class="fab-btn" id="bossFab" onclick="openCourseModal(null)">
                 <svg viewBox="0 0 24 24" fill="white"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
             </button>
         </div>
@@ -646,9 +760,9 @@
 
         <!-- Boss Bottom Nav -->
         <nav class="bottom-nav" id="boss-nav">
-            <div class="nav-item active" onclick="switchBossTab('schedule', this)">
-                <svg class="icon icon-lg" viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z"/></svg>
-                <span class="nav-label">排課</span>
+            <div class="nav-item active" onclick="switchBossTab('courses', this)">
+                <svg class="icon icon-lg" viewBox="0 0 24 24"><path d="M21 5c-1.11-.35-2.33-.5-3.5-.5-1.95 0-4.05.4-5.5 1.5-1.45-1.1-3.55-1.5-5.5-1.5S2.45 4.9 1 6v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.05C3.1 20.45 5.05 20 6.5 20c1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.3 4.75 1.05.1.05.15.05.25.05.25 0 .5-.25.5-.5V6c-.6-.45-1.25-.75-2-1zm0 13.5c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V8c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5v11.5z"/></svg>
+                <span class="nav-label">課程</span>
             </div>
             <div class="nav-item" onclick="switchBossTab('coaches', this)">
                 <svg class="icon icon-lg" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
@@ -661,56 +775,79 @@
         </nav>
     </div>
 
-    <!-- Boss: Add/Edit Schedule Modal -->
-    <div class="modal-overlay" id="bossScheduleModal">
-        <div class="modal-card">
-            <div class="modal-title" id="bossScheduleModalTitle">新增課程</div>
-            <div class="form-group">
-                <label>教練</label>
-                <select id="bossCoachSelect"></select>
+    <!-- Course Create/Edit Modal -->
+    <div class="course-modal-overlay" id="courseModal" onclick="if(event.target===this)closeCourseModal()">
+        <div class="course-modal-card">
+            <div class="course-modal-header">
+                <span class="course-modal-title" id="courseModalTitle">新增課程</span>
+                <button class="course-modal-close" onclick="closeCourseModal()">&times;</button>
             </div>
-            <div class="form-group">
-                <label>課程</label>
-                <input type="text" id="bossCourseInput" placeholder="課程名稱">
+
+            <div class="course-section">
+                <div class="course-section-title">基本資料</div>
+                <div class="form-group"><label>課程名稱</label><input type="text" id="cmName" placeholder="例：A訓練班"></div>
+                <div class="form-group"><label>地點</label><input type="text" id="cmLocation" placeholder="例：體育館"></div>
+                <div class="time-row">
+                    <div class="form-group"><label>開始</label><input type="time" id="cmStart"></div>
+                    <div class="form-group"><label>結束</label><input type="time" id="cmEnd"></div>
+                </div>
+                <div class="duration-chips">
+                    <div class="duration-btn" onclick="calcEnd('cmStart','cmEnd',60)">+1 hr</div>
+                    <div class="duration-btn" onclick="calcEnd('cmStart','cmEnd',90)">+1.5 hr</div>
+                    <div class="duration-btn" onclick="calcEnd('cmStart','cmEnd',120)">+2 hr</div>
+                </div>
             </div>
-            <div class="form-group">
-                <label>地點</label>
-                <input type="text" id="bossLocationInput" placeholder="地點">
+
+            <div class="course-section">
+                <div class="course-section-title">指派教練</div>
+                <div class="coach-select-list" id="cmCoachList"></div>
             </div>
-            <div class="form-group">
-                <label>開始時間</label>
-                <input type="time" id="bossStartInput">
+
+            <div class="course-section">
+                <div class="course-section-title">選擇日期</div>
+                <div class="date-mode-toggle">
+                    <div class="date-mode-btn active" onclick="setCmDateMode('manual')" id="cmDateModeManual">手動選擇</div>
+                    <div class="date-mode-btn" onclick="setCmDateMode('weekday')" id="cmDateModeWeekday">按星期產生</div>
+                </div>
+
+                <div id="cmDateManualView">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <button class="month-btn" onclick="changeCmCalMonth(-1)" style="padding:5px 10px">&lsaquo;</button>
+                        <span id="cmCalLabel" style="font-weight:700; font-size:0.95em;"></span>
+                        <button class="month-btn" onclick="changeCmCalMonth(1)" style="padding:5px 10px">&rsaquo;</button>
+                    </div>
+                    <div class="date-picker-cal" id="cmCalGrid"></div>
+                </div>
+
+                <div id="cmDateWeekdayView" style="display:none">
+                    <div class="form-group"><label>起始日期</label><input type="date" id="cmRangeStart"></div>
+                    <div class="form-group"><label>結束日期</label><input type="date" id="cmRangeEnd"></div>
+                    <label style="margin-bottom:8px; display:block;">選擇星期</label>
+                    <div class="weekday-selector" id="cmWeekdaySelector"></div>
+                    <button class="btn-action" onclick="generateWeekdayDates()" style="width:100%; justify-content:center; border-radius:12px; padding:10px; margin-top:8px;">產生日期</button>
+                </div>
+
+                <div class="selected-dates-tags" id="cmSelectedDatesTags"></div>
+                <div style="font-size:0.8em; color:#999; margin-top:6px;">已選 <strong id="cmDateCount">0</strong> 個日期</div>
             </div>
-            <div class="form-group">
-                <label>結束時間</label>
-                <input type="time" id="bossEndInput">
-            </div>
-            <div class="form-group">
-                <label>類型</label>
-                <select id="bossScheduleType">
-                    <option value="oneoff">一次性（指定日期）</option>
-                    <option value="recurring">週期性（每週固定）</option>
-                </select>
-            </div>
-            <div class="form-group" id="bossDateGroup">
-                <label>日期</label>
-                <input type="date" id="bossDateInput">
-            </div>
-            <div class="form-group" id="bossDayGroup" style="display:none">
-                <label>星期</label>
-                <select id="bossDaySelect">
-                    <option value="0">星期日</option>
-                    <option value="1">星期一</option>
-                    <option value="2">星期二</option>
-                    <option value="3">星期三</option>
-                    <option value="4">星期四</option>
-                    <option value="5">星期五</option>
-                    <option value="6">星期六</option>
-                </select>
-            </div>
+
+            <div class="course-save-summary" id="cmSaveSummary" style="display:none"></div>
+
             <div class="modal-actions">
-                <button class="btn-secondary" onclick="closeBossScheduleModal()">取消</button>
-                <button class="btn-primary" onclick="saveBossSchedule()" style="flex:2">儲存</button>
+                <button class="btn-secondary" onclick="closeCourseModal()">取消</button>
+                <button class="btn-primary" onclick="saveCourse()" style="flex:2">儲存課程</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sub Coach Selection Modal -->
+    <div class="modal-overlay" id="subCoachModal" onclick="if(event.target===this)closeSubCoachModal()">
+        <div class="modal-card">
+            <div class="modal-title">選擇代課教練</div>
+            <div id="subCoachInfo" style="font-size:0.85em; color:#888; margin-bottom:15px;"></div>
+            <div class="sub-coach-list" id="subCoachList"></div>
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="closeSubCoachModal()">取消</button>
             </div>
         </div>
     </div>
@@ -737,7 +874,7 @@
         let unsubscribeLogs = null;
         let unsubscribeSchedule = null;
         
-        let currentTab = 'home';
+        let currentTab = 'schedule';
         let currentCalDate = new Date();
         let reportMonthDate = new Date();
         // Fix: Use local time for selectedDate instead of UTC
@@ -752,9 +889,6 @@
         let allCoaches = []; // populated for boss view
 
         // --- 初始化 ---
-        const _todayForInput = new Date();
-        const _inputOffset = _todayForInput.getTimezoneOffset() * 60000;
-        document.getElementById('dateInput').value = new Date(_todayForInput.getTime() - _inputOffset).toISOString().split('T')[0];
 
         // --- Authentication Logic ---
         auth.onAuthStateChanged(async user => {
@@ -852,8 +986,8 @@
 
         function updateUI() {
             updateLists();
-            if (currentTab === 'list') renderLogList(); // 報表
-            if (currentTab === 'schedule') { renderCalendar(); renderTimetableSettings(); }
+            if (currentTab === 'list') renderLogList();
+            if (currentTab === 'schedule') renderCalendar();
         }
 
         function switchTab(tabName, el) {
@@ -861,10 +995,9 @@
             document.querySelectorAll('#app-content .tab-content').forEach(c => c.classList.remove('active'));
             document.getElementById('tab-' + tabName).classList.add('active');
             if (el) {
-                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                document.querySelectorAll('#app-content .bottom-nav .nav-item').forEach(n => n.classList.remove('active'));
                 el.classList.add('active');
             }
-            if(typeof resetScheduleForm === 'function') resetScheduleForm(); // Reset form when switching tabs
             updateUI();
         }
 
@@ -1112,12 +1245,6 @@
         }
 
         // --- 日曆邏輯 ---
-        function setScheduleView(view) {
-            document.getElementById('view-calendar').style.display = view === 'calendar' ? 'block' : 'none';
-            document.getElementById('view-list').style.display = view === 'list' ? 'block' : 'none';
-            document.getElementById('btn-view-cal').className = `toggle-btn ${view === 'calendar' ? 'active' : ''}`;
-            document.getElementById('btn-view-list').className = `toggle-btn ${view === 'list' ? 'active' : ''}`;
-        }
         function changeCalMonth(d) { currentCalDate.setMonth(currentCalDate.getMonth() + d); renderCalendar(); }
 
         function renderCalendar() {
@@ -1304,73 +1431,7 @@
             endInput.value = date.toTimeString().substring(0, 5);
         }
 
-        // --- One-off Modal Logic ---
-        function openOneOffModal() {
-            document.getElementById('modalDateLabel').innerText = selectedDate;
-            document.getElementById('oneOffModal').style.display = 'flex';
-            document.getElementById('moStart').focus();
-        }
-        function closeOneOffModal() {
-            document.getElementById('oneOffModal').style.display = 'none';
-            // Clear inputs
-            ['moStart','moEnd','moBoss','moCourse','moLocation'].forEach(id=>document.getElementById(id).value='');
-        }
-        async function saveOneOffEntry() {
-            if(!currentUser) return;
-            const s=document.getElementById('moStart').value, e=document.getElementById('moEnd').value, b=document.getElementById('moBoss').value, c=document.getElementById('moCourse').value, l=document.getElementById('moLocation').value;
-            let _valid = true;
-            [['moStart',s],['moEnd',e],['moBoss',b]].forEach(([id,val]) => {
-                const el = document.getElementById(id);
-                if (!val) { el.classList.add('field-error'); _valid = false; }
-                else el.classList.remove('field-error');
-            });
-            if(!_valid) return;
-
-            const _bossList = document.getElementById('bossList');
-            const _bossOption = _bossList ? Array.from(_bossList.options).find(o => o.value === b) : null;
-            const bossUid = _bossOption ? _bossOption.getAttribute('data-uid') : null;
-            const data = {
-                uid: currentUser.uid, // 加入使用者 ID
-                date: selectedDate, start: s, end: e, boss: b, course: c, location: l,
-                isOneOff: true,
-                bossUid: bossUid || null
-            };
-
-            try {
-                await db.collection("schedule").add(data);
-                closeOneOffModal();
-            } catch (err) { alert("同步失敗: " + err); }
-        }
-
         // --- 共用功能 ---
-        function renderTimetableSettings() {
-            const container = document.getElementById('timetableContainer');
-            const filter = document.getElementById('filterBoss').value;
-            container.innerHTML = '';
-            
-            // Only show Recurring items here (no date property)
-            const recurring = schedule.filter(s => !s.date && (filter==='all'||s.boss===filter));
-            
-            const dayMap = {1:'週一', 2:'週二', 3:'週三', 4:'週四', 5:'週五', 6:'週六', 0:'週日'};
-            const ttParts = [];
-            [1,2,3,4,5,6,0].forEach(d => {
-                const list = recurring.filter(s => s.day==d).sort((a,b)=>a.start.localeCompare(b.start));
-                if(list.length > 0) {
-                    ttParts.push(`<div style="margin-top:20px;font-weight:700;color:#ccc;font-size:0.9em;margin-bottom:8px;">${dayMap[d]}</div>`);
-                    list.forEach(c => {
-                        const loc = c.location ? `<span style="font-size:0.85em; color:#999;"> @ ${esc(c.location)}</span>` : '';
-                        ttParts.push(`<div class="record-card" style="border-left-color:#ccc; padding:12px;">
-                            <div class="record-info"><div class="record-title" style="font-size:1em;">${esc(c.boss)} <span class="record-tag">${esc(c.course||'')}</span></div><div class="record-meta">${esc(c.start)}-${esc(c.end)} ${loc}</div></div>
-                            <div style="display:flex;">
-                                <button class="btn-action" style="padding:4px;" onclick="editSchedule('${c.id}')"><svg class="icon" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
-                                <button class="delete-btn" onclick="deleteSchedule('${c.id}')"><svg class="icon" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>
-                            </div>
-                        </div>`);
-                    });
-                }
-            });
-            container.innerHTML = ttParts.join('');
-        }
 
         async function checkInFromCal(id, date) {
             if(!currentUser) return;
@@ -1385,8 +1446,9 @@
             const data = {
                 uid: currentUser.uid, // 加入使用者 ID
                 date, boss:item.boss, course:item.course, location:item.location || '',
-                start:item.start, end:item.end, note:item.note || '', hours:h, isSub:false,
-                bossUid: bossUid || null,
+                start:item.start, end:item.end, note:item.note || '', hours:h,
+                isSub: item.isSub || false,
+                bossUid: bossUid || item.createdByUid || null,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             };
             try {
@@ -1395,99 +1457,6 @@
                 renderSelectedDateInfo();
             } catch (err) { alert("打卡失敗: " + err); }
         }
-        async function addLogEntry() {
-            if(!currentUser) return;
-            const d=document.getElementById('dateInput').value, b=document.getElementById('bossInput').value, c=document.getElementById('courseInput').value, loc=document.getElementById('locationInput').value, s=document.getElementById('startTime').value, e=document.getElementById('endTime').value;
-            const isSub = document.getElementById('isSubInput').checked;
-            let valid = true;
-            [['dateInput',d],['bossInput',b],['startTime',s],['endTime',e]].forEach(([id,val]) => {
-                const el = document.getElementById(id);
-                if (!val) { el.classList.add('field-error'); valid = false; }
-                else el.classList.remove('field-error');
-            });
-            if(!valid) return;
-            
-            // Resolve bossUid from datalist
-            const _bossList = document.getElementById('bossList');
-            const _bossOption = _bossList ? Array.from(_bossList.options).find(o => o.value === b) : null;
-            const bossUid = _bossOption ? _bossOption.getAttribute('data-uid') : null;
-
-            const data = {
-                uid: currentUser.uid, // 加入使用者 ID
-                date: d, boss: b, course: c, location: loc, start: s, end: e, 
-                note: document.getElementById('noteInput').value, 
-                hours: calculateHours(s,e), isSub: isSub,
-                bossUid: bossUid || null,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            };
-
-            try {
-                await db.collection("logs").add(data);
-                document.getElementById('isSubInput').checked = false;
-                showToast(`已成功記錄 ${data.hours} 小時`);
-                switchTab('list', document.querySelector('.bottom-nav .nav-item:nth-child(2)')); // 儲存後自動跳轉
-            } catch (err) { alert("同步失敗: " + err); }
-        }
-        async function addTimetableEntry() {
-            if(!currentUser) return;
-            const d=document.getElementById('ttDay').value, s=document.getElementById('ttStart').value, e=document.getElementById('ttEnd').value, b=document.getElementById('ttBoss').value, loc=document.getElementById('ttLocation').value;
-            let valid = true;
-            [['ttStart',s],['ttEnd',e],['ttBoss',b]].forEach(([id,val]) => {
-                const el = document.getElementById(id);
-                if (!val) { el.classList.add('field-error'); valid = false; }
-                else el.classList.remove('field-error');
-            });
-            if(!valid) return;
-            
-            const data = {
-                uid: currentUser.uid, // 加入使用者 ID
-                day: parseInt(d, 10), start: s, end: e, boss: b,
-                course: document.getElementById('ttCourse').value, location: loc,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            };
-
-            try {
-                if (currentEditingId) {
-                    await db.collection("schedule").doc(currentEditingId.toString()).update(data);
-                    resetScheduleForm();
-                } else {
-                    await db.collection("schedule").add(data);
-                }
-                setScheduleView('calendar'); // 儲存後跳回日曆
-            } catch (err) { alert("同步失敗: " + err); }
-        }
-
-        function editSchedule(id) {
-            const item = schedule.find(s => s.id == id);
-            if(!item) return;
-            currentEditingId = id;
-            
-            document.getElementById('ttDay').value = item.day;
-            document.getElementById('ttStart').value = item.start;
-            document.getElementById('ttEnd').value = item.end;
-            document.getElementById('ttBoss').value = item.boss;
-            document.getElementById('ttCourse').value = item.course;
-            document.getElementById('ttLocation').value = item.location || '';
-            
-            // Scroll to top
-            document.getElementById('view-list').scrollIntoView({ behavior: 'smooth' });
-            
-            // Change button to Update
-            const btn = document.querySelector('#view-list .btn-primary');
-            btn.innerHTML = `<svg class="icon" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> 更新課表`;
-            btn.style.background = '#2196f3'; // Visual cue
-        }
-
-        function resetScheduleForm() {
-            currentEditingId = null;
-            ['ttStart','ttEnd','ttBoss','ttCourse','ttLocation'].forEach(id => document.getElementById(id).value = '');
-            const btn = document.querySelector('#view-list .btn-primary');
-            if (btn) {
-                btn.innerHTML = `<svg class="icon" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg> 加入課表`;
-                btn.style.background = '';
-            }
-        }
-        
         async function deleteLog(id) {
             if (confirm('確定刪除此記錄？')) {
                 try {
@@ -1591,15 +1560,19 @@
         // ===== BOSS VIEW JS =====
 
         // Boss global state
-        let bossCurrentTab = 'schedule';
+        let bossCurrentTab = 'courses';
         let bossCalDate = new Date();
         let bossSchedules = [];
         let bossLogs = [];
+        let bossCourses = [];
         let unsubscribeBossSchedule = null;
         let unsubscribeBossLogs = null;
+        let unsubscribeBossLogsByName = null;
+        let unsubscribeBossCourses = null;
         let bossSelectedDate = null;
         let bossEditingScheduleId = null;
         let bossSelectedMonths = [];
+        let courseStatusFilter = 'all'; // 'all' | 'active' | 'archived'
 
         // Init default month for boss reports
         const _bossNow = new Date();
@@ -1608,6 +1581,8 @@
         function initBossView() {
             if (unsubscribeBossSchedule) { unsubscribeBossSchedule(); unsubscribeBossSchedule = null; }
             if (unsubscribeBossLogs) { unsubscribeBossLogs(); unsubscribeBossLogs = null; }
+            if (unsubscribeBossLogsByName) { unsubscribeBossLogsByName(); unsubscribeBossLogsByName = null; }
+            if (unsubscribeBossCourses) { unsubscribeBossCourses(); unsubscribeBossCourses = null; }
 
             document.getElementById('app-content').style.display = 'none';
             document.getElementById('boss-content').style.display = 'block';
@@ -1622,7 +1597,6 @@
             // Load all coaches
             db.collection('users').where('role', '==', 'coach').get().then(snap => {
                 allCoaches = snap.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
-                populateCoachSelect();
                 updateBossUI();
             }).catch(err => {
                 allCoaches = [];
@@ -1637,13 +1611,44 @@
                     updateBossUI();
                 });
 
-            // Listen to logs where bossUid matches
+            // Listen to courses created by this boss
+            unsubscribeBossCourses = db.collection('courses')
+                .where('bossUid', '==', currentUser.uid)
+                .onSnapshot(snap => {
+                    bossCourses = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    updateBossUI();
+                }, err => { console.error('Courses listener error:', err); });
+
+            // Listen to logs: query by bossUid AND by boss name, merge & deduplicate
+            const bossName = currentUser.displayName || currentUser.email;
+            let _logsByUid = [], _logsByName = [];
+
+            function _mergeBossLogs() {
+                const seen = new Set();
+                bossLogs = [];
+                [..._logsByUid, ..._logsByName].forEach(l => {
+                    if (!seen.has(l.id)) { seen.add(l.id); bossLogs.push(l); }
+                });
+                updateBossUI();
+            }
+
+            // Query 1: logs where bossUid matches (proper linkage)
             unsubscribeBossLogs = db.collection('logs')
                 .where('bossUid', '==', currentUser.uid)
                 .onSnapshot(snap => {
-                    bossLogs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    updateBossUI();
-                });
+                    _logsByUid = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    _mergeBossLogs();
+                }, err => { console.error('Boss logs (uid) error:', err); });
+
+            // Query 2: logs where boss name matches (fallback for legacy/unlinked logs)
+            if (bossName) {
+                unsubscribeBossLogsByName = db.collection('logs')
+                    .where('boss', '==', bossName)
+                    .onSnapshot(snap => {
+                        _logsByName = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        _mergeBossLogs();
+                    }, err => { console.error('Boss logs (name) error:', err); });
+            }
         }
 
         function switchBossTab(tabName, el) {
@@ -1654,181 +1659,650 @@
                 document.querySelectorAll('#boss-nav .nav-item').forEach(n => n.classList.remove('active'));
                 el.classList.add('active');
             }
-            document.getElementById('bossFab').style.display = tabName === 'schedule' ? 'flex' : 'none';
+            document.getElementById('bossFab').style.display = tabName === 'courses' ? 'flex' : 'none';
             updateBossUI();
         }
 
         function updateBossUI() {
-            if (bossCurrentTab === 'schedule') renderBossCalendar();
+            if (bossCurrentTab === 'courses') renderCourseList();
             if (bossCurrentTab === 'coaches') renderBossCoaches();
             if (bossCurrentTab === 'report') renderBossReport();
         }
 
-        // ===== BOSS CALENDAR =====
+        // ===== COURSE MANAGEMENT =====
 
-        const BOSS_DAY_NAMES = ['日','一','二','三','四','五','六'];
+        // Course modal state
+        let cmSelectedCoaches = new Set();
+        let cmSelectedDates = new Set();
+        let cmCalDate = new Date();
+        let cmSelectedWeekdays = new Set();
+        let cmEditingCourseId = null;
+        let cmDateMode = 'manual';
+        let currentCourseDetailId = null;
+        // Sub coach modal state
+        let subModalCourseId = null, subModalDate = null, subModalOriginalCoachUid = null, subModalScheduleId = null;
 
-        function renderBossCalendar() {
-            const year = bossCalDate.getFullYear();
-            const month = bossCalDate.getMonth();
-            document.getElementById('bossCalLabel').textContent = `${year}年${month+1}月`;
+        // --- Course List ---
+        function renderCourseList() {
+            const container = document.getElementById('courseListContainer');
+            const filtersEl = document.getElementById('courseStatusFilters');
+            if (!container || !filtersEl) return;
 
-            document.getElementById('bossCalDayNames').innerHTML =
-                BOSS_DAY_NAMES.map(d => `<div class="cal-day-name">${d}</div>`).join('');
+            // Status filters
+            const filters = [
+                { key: 'all', label: '全部' },
+                { key: 'active', label: '進行中' },
+                { key: 'archived', label: '已結束' }
+            ];
+            filtersEl.innerHTML = filters.map(f =>
+                `<div class="status-chip ${courseStatusFilter === f.key ? 'active' : ''}" onclick="courseStatusFilter='${f.key}';renderCourseList()">${f.label}</div>`
+            ).join('');
 
+            const now = new Date();
+            const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+
+            let filtered = bossCourses;
+            if (courseStatusFilter === 'active') filtered = filtered.filter(c => c.status === 'active');
+            else if (courseStatusFilter === 'archived') filtered = filtered.filter(c => c.status === 'archived');
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<div style="text-align:center;padding:60px 20px;color:#ccc;"><div style="font-size:2em;margin-bottom:12px;">📚</div><div style="font-size:0.95em;font-weight:600;">尚無課程</div><div style="font-size:0.8em;margin-top:4px;">點擊右下角按鈕建立課程</div></div>';
+                return;
+            }
+
+            const dayNames = ['日','一','二','三','四','五','六'];
+            container.innerHTML = filtered.map(c => {
+                const dates = (c.dates || []).sort();
+                const futureDates = dates.filter(d => d >= todayStr);
+                const nextDate = futureDates[0];
+                const nextDow = nextDate ? dayNames[new Date(nextDate + 'T00:00:00').getDay()] : '';
+                const coaches = (c.coaches || []);
+                const coachChips = coaches.map(ch =>
+                    `<span class="coach-chip">${ch.photoURL ? `<img src="${esc(ch.photoURL)}">` : ''}${esc(ch.name || ch.email)}</span>`
+                ).join('');
+                const statusClass = c.status === 'archived' ? 'archived' : 'active';
+                const statusLabel = c.status === 'archived' ? '已結束' : '進行中';
+
+                return `
+                <div class="course-card" onclick="showCourseDetail('${c.id}')">
+                    <div class="course-card-header">
+                        <div>
+                            <div class="course-card-name">${esc(c.name)}</div>
+                            <div class="course-card-time">${esc(c.start)} - ${esc(c.end)} &nbsp; ${c.location ? '📍 ' + esc(c.location) : ''}</div>
+                        </div>
+                        <span class="course-status-badge ${statusClass}">${statusLabel}</span>
+                    </div>
+                    <div class="course-card-meta">${coachChips}</div>
+                    <div class="date-summary">
+                        📅 ${dates.length} 個日期${nextDate ? ` · 下次：${nextDate} (${nextDow})` : ' · 已全部完成'}
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // --- Course Modal ---
+        function openCourseModal(courseId) {
+            cmEditingCourseId = courseId;
+            cmSelectedCoaches = new Set();
+            cmSelectedDates = new Set();
+            cmCalDate = new Date();
+            cmSelectedWeekdays = new Set();
+            cmDateMode = 'manual';
+
+            if (courseId) {
+                const c = bossCourses.find(x => x.id === courseId);
+                if (!c) return;
+                document.getElementById('courseModalTitle').textContent = '編輯課程';
+                document.getElementById('cmName').value = c.name || '';
+                document.getElementById('cmLocation').value = c.location || '';
+                document.getElementById('cmStart').value = c.start || '';
+                document.getElementById('cmEnd').value = c.end || '';
+                (c.coaches || []).forEach(ch => cmSelectedCoaches.add(ch.uid));
+                (c.dates || []).forEach(d => cmSelectedDates.add(d));
+                if (c.weekdays) c.weekdays.forEach(w => cmSelectedWeekdays.add(w));
+                if (c.dateRangeStart) document.getElementById('cmRangeStart').value = c.dateRangeStart;
+                if (c.dateRangeEnd) document.getElementById('cmRangeEnd').value = c.dateRangeEnd;
+            } else {
+                document.getElementById('courseModalTitle').textContent = '新增課程';
+                document.getElementById('cmName').value = '';
+                document.getElementById('cmLocation').value = '';
+                document.getElementById('cmStart').value = '';
+                document.getElementById('cmEnd').value = '';
+                document.getElementById('cmRangeStart').value = '';
+                document.getElementById('cmRangeEnd').value = '';
+            }
+
+            renderCmCoachList();
+            renderCmCalendar();
+            renderCmWeekdaySelector();
+            renderCmSelectedDates();
+            setCmDateMode('manual');
+            document.getElementById('courseModal').style.display = 'flex';
+        }
+
+        function closeCourseModal() {
+            document.getElementById('courseModal').style.display = 'none';
+            cmEditingCourseId = null;
+        }
+
+        function renderCmCoachList() {
+            const el = document.getElementById('cmCoachList');
+            el.innerHTML = allCoaches.map(c => {
+                const sel = cmSelectedCoaches.has(c.uid) ? 'selected' : '';
+                const avatar = c.photoURL ? `<img src="${esc(c.photoURL)}">` : '';
+                return `<div class="coach-select-item ${sel}" onclick="toggleCmCoach('${c.uid}')">${avatar}${esc(c.name || c.email)}</div>`;
+            }).join('');
+            if (allCoaches.length === 0) el.innerHTML = '<span style="color:#aaa;font-size:0.85em">暫無教練</span>';
+        }
+
+        function toggleCmCoach(uid) {
+            if (cmSelectedCoaches.has(uid)) cmSelectedCoaches.delete(uid);
+            else cmSelectedCoaches.add(uid);
+            renderCmCoachList();
+            updateCmSummary();
+        }
+
+        // Date mode
+        function setCmDateMode(mode) {
+            cmDateMode = mode;
+            document.getElementById('cmDateModeManual').className = `date-mode-btn ${mode === 'manual' ? 'active' : ''}`;
+            document.getElementById('cmDateModeWeekday').className = `date-mode-btn ${mode === 'weekday' ? 'active' : ''}`;
+            document.getElementById('cmDateManualView').style.display = mode === 'manual' ? '' : 'none';
+            document.getElementById('cmDateWeekdayView').style.display = mode === 'weekday' ? '' : 'none';
+        }
+
+        // Calendar for date picking
+        function changeCmCalMonth(d) { cmCalDate.setMonth(cmCalDate.getMonth() + d); renderCmCalendar(); }
+
+        function renderCmCalendar() {
+            const year = cmCalDate.getFullYear(), month = cmCalDate.getMonth();
+            document.getElementById('cmCalLabel').textContent = `${year}年 ${month + 1}月`;
+            const dayNames = ['日','一','二','三','四','五','六'];
+            let html = dayNames.map(d => `<div class="dp-day-name">${d}</div>`).join('');
             const firstDay = new Date(year, month, 1).getDay();
-            const daysInMonth = new Date(year, month+1, 0).getDate();
-            const now2 = new Date();
-            const todayStr = `${now2.getFullYear()}-${String(now2.getMonth()+1).padStart(2,'0')}-${String(now2.getDate()).padStart(2,'0')}`;
-
-            let cells = '';
-            for (let i = 0; i < firstDay; i++) cells += '<div class="cal-cell"></div>';
-
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const now = new Date();
+            const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+            for (let i = 0; i < firstDay; i++) html += '<div class="dp-cell dp-empty"></div>';
             for (let d = 1; d <= daysInMonth; d++) {
                 const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-                const dayOfWeek = new Date(year, month, d).getDay();
-                const isToday = dateStr === todayStr;
-                const isSelected = dateStr === bossSelectedDate;
-
-                const daySchedules = bossSchedules.filter(s =>
-                    (s.isOneOff && s.date === dateStr) ||
-                    (!s.isOneOff && s.day == dayOfWeek)
-                );
-
-                const dots = daySchedules.slice(0,3).map(() =>
-                    `<div class="dot ${isSelected ? 'selected-day-dot' : 'future'}"></div>`
-                ).join('');
-
-                cells += `<div class="cal-cell ${isToday?'today':''} ${isSelected?'selected':''}" onclick="selectBossDate('${dateStr}')">${d}${dots ? `<div class="dots-container">${dots}</div>` : ''}</div>`;
+                const sel = cmSelectedDates.has(dateStr) ? 'dp-selected' : '';
+                const today = dateStr === todayStr ? 'dp-today' : '';
+                html += `<div class="dp-cell ${sel} ${today}" onclick="toggleCmDate('${dateStr}')">${d}</div>`;
             }
-            document.getElementById('bossCalGrid').innerHTML = cells;
-
-            if (bossSelectedDate) renderBossDateDetail(bossSelectedDate);
+            document.getElementById('cmCalGrid').innerHTML = html;
         }
 
-        function bossCalPrev() { bossCalDate.setMonth(bossCalDate.getMonth()-1); renderBossCalendar(); }
-        function bossCalNext() { bossCalDate.setMonth(bossCalDate.getMonth()+1); renderBossCalendar(); }
-
-        function selectBossDate(dateStr) {
-            bossSelectedDate = dateStr;
-            renderBossCalendar();
+        function toggleCmDate(dateStr) {
+            if (cmSelectedDates.has(dateStr)) cmSelectedDates.delete(dateStr);
+            else cmSelectedDates.add(dateStr);
+            renderCmCalendar();
+            renderCmSelectedDates();
+            updateCmSummary();
         }
 
-        function renderBossDateDetail(dateStr) {
-            const dow = new Date(dateStr + 'T00:00:00').getDay();
-            const daySchedules = bossSchedules.filter(s =>
-                (s.isOneOff && s.date === dateStr) ||
-                (!s.isOneOff && s.day == dow)
-            ).sort((a,b) => (a.start||'').localeCompare(b.start||''));
-
-            const coachName = uid => (allCoaches.find(c => c.uid === uid) || {}).name || uid;
-
-            const items = daySchedules.length === 0
-                ? '<p style="color:#aaa;text-align:center;padding:20px">沒有課程</p>'
-                : daySchedules.map(s => `
-                    <div class="record-card" style="cursor:pointer" onclick="openBossScheduleModal('${s.id}')">
-                        <div class="record-info">
-                            <div class="record-title">${esc(s.course || '未命名')}</div>
-                            <div class="record-meta">${esc(s.start)}–${esc(s.end)} &nbsp;|&nbsp; ${esc(s.location || '')} &nbsp;|&nbsp; <strong>${esc(coachName(s.assignedToUid))}</strong>${s.isOneOff ? '' : ' <span class="record-tag">週期</span>'}</div>
-                        </div>
-                        <button class="delete-btn" onclick="event.stopPropagation();deleteBossSchedule('${s.id}')">✕</button>
-                    </div>`).join('');
-
-            document.getElementById('bossCalDetail').innerHTML = `<div style="font-weight:700;margin-bottom:10px">${esc(dateStr)} 的課程</div>${items}`;
+        function renderCmSelectedDates() {
+            const sorted = [...cmSelectedDates].sort();
+            const dayNames = ['日','一','二','三','四','五','六'];
+            document.getElementById('cmSelectedDatesTags').innerHTML = sorted.map(d => {
+                const dow = dayNames[new Date(d + 'T00:00:00').getDay()];
+                return `<span class="date-tag">${d} (${dow})<span class="date-tag-remove" onclick="event.stopPropagation();removeCmDate('${d}')">&times;</span></span>`;
+            }).join('');
+            document.getElementById('cmDateCount').textContent = sorted.length;
         }
 
-        // ===== BOSS SCHEDULE MODAL =====
-
-        function populateCoachSelect() {
-            const sel = document.getElementById('bossCoachSelect');
-            if (!sel) return;
-            sel.innerHTML = allCoaches.map(c =>
-                `<option value="${c.uid}">${esc(c.name || c.email)}</option>`
-            ).join('');
+        function removeCmDate(d) {
+            cmSelectedDates.delete(d);
+            renderCmCalendar();
+            renderCmSelectedDates();
+            updateCmSummary();
         }
 
-        document.getElementById('bossScheduleType').addEventListener('change', function() {
-            document.getElementById('bossDateGroup').style.display = this.value === 'oneoff' ? '' : 'none';
-            document.getElementById('bossDayGroup').style.display  = this.value === 'recurring' ? '' : 'none';
-        });
+        // Weekday selector
+        function renderCmWeekdaySelector() {
+            const dayNames = ['日','一','二','三','四','五','六'];
+            document.getElementById('cmWeekdaySelector').innerHTML = dayNames.map((name, i) => {
+                const sel = cmSelectedWeekdays.has(i) ? 'selected' : '';
+                return `<div class="weekday-btn ${sel}" onclick="toggleCmWeekday(${i})">${name}</div>`;
+            }).join('');
+        }
 
-        function openBossScheduleModal(scheduleId) {
-            bossEditingScheduleId = scheduleId;
-            if (scheduleId) {
-                const s = bossSchedules.find(x => x.id === scheduleId);
-                if (!s) return;
-                document.getElementById('bossScheduleModalTitle').textContent = '編輯課程';
-                document.getElementById('bossCoachSelect').value = s.assignedToUid || '';
-                document.getElementById('bossCourseInput').value = s.course || '';
-                document.getElementById('bossLocationInput').value = s.location || '';
-                document.getElementById('bossStartInput').value = s.start || '';
-                document.getElementById('bossEndInput').value = s.end || '';
-                document.getElementById('bossScheduleType').value = s.isOneOff ? 'oneoff' : 'recurring';
-                document.getElementById('bossDateInput').value = s.date || bossSelectedDate || '';
-                document.getElementById('bossDaySelect').value = s.day != null ? s.day : 1;
-                document.getElementById('bossDateGroup').style.display = s.isOneOff ? '' : 'none';
-                document.getElementById('bossDayGroup').style.display  = s.isOneOff ? 'none' : '';
+        function toggleCmWeekday(day) {
+            if (cmSelectedWeekdays.has(day)) cmSelectedWeekdays.delete(day);
+            else cmSelectedWeekdays.add(day);
+            renderCmWeekdaySelector();
+        }
+
+        function generateWeekdayDates() {
+            const startStr = document.getElementById('cmRangeStart').value;
+            const endStr = document.getElementById('cmRangeEnd').value;
+            if (!startStr || !endStr) { alert('請選擇起始和結束日期'); return; }
+            if (cmSelectedWeekdays.size === 0) { alert('請至少選擇一個星期'); return; }
+            const start = new Date(startStr + 'T00:00:00');
+            const end = new Date(endStr + 'T00:00:00');
+            if (start > end) { alert('起始日期不能晚於結束日期'); return; }
+            let count = 0;
+            const cur = new Date(start);
+            while (cur <= end) {
+                if (cmSelectedWeekdays.has(cur.getDay())) {
+                    const ds = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
+                    cmSelectedDates.add(ds);
+                    count++;
+                }
+                cur.setDate(cur.getDate() + 1);
+            }
+            showToast(`已產生 ${count} 個日期`);
+            renderCmCalendar();
+            renderCmSelectedDates();
+            updateCmSummary();
+        }
+
+        function updateCmSummary() {
+            const el = document.getElementById('cmSaveSummary');
+            const dates = cmSelectedDates.size;
+            const coaches = cmSelectedCoaches.size;
+            if (dates > 0 && coaches > 0) {
+                el.style.display = '';
+                el.textContent = `${dates} 個日期 × ${coaches} 位教練 = ${dates * coaches} 個排課條目`;
             } else {
-                document.getElementById('bossScheduleModalTitle').textContent = '新增課程';
-                document.getElementById('bossCourseInput').value = '';
-                document.getElementById('bossLocationInput').value = '';
-                document.getElementById('bossStartInput').value = '';
-                document.getElementById('bossEndInput').value = '';
-                document.getElementById('bossScheduleType').value = 'oneoff';
-                document.getElementById('bossDateInput').value = bossSelectedDate || '';
-                document.getElementById('bossDateGroup').style.display = '';
-                document.getElementById('bossDayGroup').style.display = 'none';
+                el.style.display = 'none';
             }
-            document.getElementById('bossScheduleModal').style.display = 'flex';
         }
 
-        function closeBossScheduleModal() {
-            document.getElementById('bossScheduleModal').style.display = 'none';
-            bossEditingScheduleId = null;
-        }
+        // --- Save Course ---
+        async function saveCourse() {
+            const name = document.getElementById('cmName').value.trim();
+            const location = document.getElementById('cmLocation').value.trim();
+            const start = document.getElementById('cmStart').value;
+            const end = document.getElementById('cmEnd').value;
 
-        async function saveBossSchedule() {
-            const assignedToUid = document.getElementById('bossCoachSelect').value;
-            const course   = document.getElementById('bossCourseInput').value.trim();
-            const location = document.getElementById('bossLocationInput').value.trim();
-            const start    = document.getElementById('bossStartInput').value;
-            const end      = document.getElementById('bossEndInput').value;
-            const isOneOff = document.getElementById('bossScheduleType').value === 'oneoff';
-            const date     = document.getElementById('bossDateInput').value;
-            const day      = parseInt(document.getElementById('bossDaySelect').value);
-
-            if (!assignedToUid || !course || !start || !end || (isOneOff && !date)) {
-                alert('請填寫教練、課程、開始及結束時間'); return;
-            }
+            // Validate
+            if (!name) { document.getElementById('cmName').classList.add('field-error'); return; }
+            document.getElementById('cmName').classList.remove('field-error');
+            if (!start || !end) { alert('請填寫開始和結束時間'); return; }
+            if (cmSelectedCoaches.size === 0) { alert('請至少選擇一位教練'); return; }
+            if (cmSelectedDates.size === 0) { alert('請至少選擇一個日期'); return; }
 
             const bossName = currentUser.displayName || currentUser.email;
-            const data = {
-                createdByUid: currentUser.uid,
-                assignedToUid,
-                boss: bossName,
-                course, location, start, end, isOneOff,
+            const coaches = [...cmSelectedCoaches].map(uid => {
+                const c = allCoaches.find(x => x.uid === uid);
+                return { uid, name: c ? (c.name || c.email) : uid, email: c ? c.email : '', photoURL: c ? (c.photoURL || '') : '' };
+            });
+            const dates = [...cmSelectedDates].sort();
+            const rangeStart = document.getElementById('cmRangeStart').value || null;
+            const rangeEnd = document.getElementById('cmRangeEnd').value || null;
+            const weekdays = cmSelectedWeekdays.size > 0 ? [...cmSelectedWeekdays] : null;
+
+            const courseData = {
+                name, location, start, end,
+                bossUid: currentUser.uid,
+                bossName,
+                coaches, dates,
+                dateRangeStart: rangeStart,
+                dateRangeEnd: rangeEnd,
+                weekdays,
+                status: 'active',
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
-            if (isOneOff) data.date = date;
-            else data.day = day;
 
             try {
-                if (bossEditingScheduleId) {
-                    await db.collection('schedule').doc(bossEditingScheduleId).update(data);
+                showLoading();
+                if (cmEditingCourseId) {
+                    // Edit existing course — diff sync
+                    await updateCourseWithSync(cmEditingCourseId, courseData, coaches, dates);
                 } else {
-                    await db.collection('schedule').add(data);
+                    // New course
+                    courseData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                    const docRef = await db.collection('courses').add(courseData);
+                    await generateScheduleEntries(docRef.id, courseData, coaches, dates);
                 }
-                closeBossScheduleModal();
+                hideLoading();
+                closeCourseModal();
+                showToast('課程已儲存');
             } catch(e) {
+                hideLoading();
                 alert('儲存失敗：' + e.message);
             }
         }
 
-        async function deleteBossSchedule(scheduleId) {
-            if (!confirm('確定刪除此課程？')) return;
+        async function generateScheduleEntries(courseId, courseData, coaches, dates) {
+            const bossName = currentUser.displayName || currentUser.email;
+            const entries = [];
+            dates.forEach(date => {
+                coaches.forEach(coach => {
+                    entries.push({
+                        createdByUid: currentUser.uid,
+                        assignedToUid: coach.uid,
+                        boss: bossName,
+                        course: courseData.name,
+                        location: courseData.location,
+                        start: courseData.start,
+                        end: courseData.end,
+                        date,
+                        isOneOff: true,
+                        courseId,
+                        isFromCourse: true,
+                        originalCoachUid: null,
+                        isSub: false,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                });
+            });
+
+            // Batch write (max 450 per batch)
+            for (let i = 0; i < entries.length; i += 450) {
+                const batch = db.batch();
+                entries.slice(i, i + 450).forEach(entry => {
+                    batch.set(db.collection('schedule').doc(), entry);
+                });
+                await batch.commit();
+            }
+        }
+
+        // --- Edit Course (diff sync) ---
+        async function updateCourseWithSync(courseId, newData, newCoaches, newDates) {
+            const oldCourse = bossCourses.find(c => c.id === courseId);
+            if (!oldCourse) throw new Error('找不到課程');
+
+            const oldDates = new Set(oldCourse.dates || []);
+            const oldCoachUids = new Set((oldCourse.coaches || []).map(c => c.uid));
+            const newDateSet = new Set(newDates);
+            const newCoachUidSet = new Set(newCoaches.map(c => c.uid));
+
+            // Update course document
+            await db.collection('courses').doc(courseId).update(newData);
+
+            // Get existing schedule entries for this course
+            const existingSnap = await db.collection('schedule')
+                .where('courseId', '==', courseId)
+                .where('isFromCourse', '==', true)
+                .get();
+
+            const existingEntries = existingSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            // Find entries to delete (removed dates or removed coaches, but not sub entries)
+            const toDelete = existingEntries.filter(e =>
+                !e.isSub && (!newDateSet.has(e.date) || !newCoachUidSet.has(e.assignedToUid))
+            );
+
+            // Find new combos to create
+            const existingCombos = new Set(existingEntries.map(e => `${e.date}_${e.assignedToUid}`));
+            const toCreate = [];
+            newDates.forEach(date => {
+                newCoaches.forEach(coach => {
+                    if (!existingCombos.has(`${date}_${coach.uid}`)) {
+                        toCreate.push({ date, coach });
+                    }
+                });
+            });
+
+            // Also update course name/location/time on remaining entries
+            const toUpdate = existingEntries.filter(e =>
+                !e.isSub && newDateSet.has(e.date) && newCoachUidSet.has(e.assignedToUid)
+            );
+
+            const bossName = currentUser.displayName || currentUser.email;
+
+            // Execute in batches
+            const allOps = [];
+            toDelete.forEach(e => allOps.push({ type: 'delete', id: e.id }));
+            toUpdate.forEach(e => allOps.push({
+                type: 'update', id: e.id,
+                data: { course: newData.name, location: newData.location, start: newData.start, end: newData.end, boss: bossName, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }
+            }));
+            toCreate.forEach(({ date, coach }) => allOps.push({
+                type: 'create',
+                data: {
+                    createdByUid: currentUser.uid, assignedToUid: coach.uid,
+                    boss: bossName, course: newData.name, location: newData.location,
+                    start: newData.start, end: newData.end, date, isOneOff: true,
+                    courseId, isFromCourse: true, originalCoachUid: null, isSub: false,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                }
+            }));
+
+            for (let i = 0; i < allOps.length; i += 450) {
+                const batch = db.batch();
+                allOps.slice(i, i + 450).forEach(op => {
+                    if (op.type === 'delete') batch.delete(db.collection('schedule').doc(op.id));
+                    else if (op.type === 'update') batch.update(db.collection('schedule').doc(op.id), op.data);
+                    else batch.set(db.collection('schedule').doc(), op.data);
+                });
+                await batch.commit();
+            }
+        }
+
+        // --- Course Detail ---
+        function showCourseDetail(courseId) {
+            currentCourseDetailId = courseId;
+            document.getElementById('courseListView').style.display = 'none';
+            document.getElementById('courseDetailView').style.display = 'block';
+            document.getElementById('bossFab').style.display = 'none';
+            renderCourseDetail(courseId);
+        }
+
+        function closeCourseDetail() {
+            document.getElementById('courseListView').style.display = '';
+            document.getElementById('courseDetailView').style.display = 'none';
+            document.getElementById('bossFab').style.display = 'flex';
+            currentCourseDetailId = null;
+        }
+
+        function renderCourseDetail(courseId) {
+            const c = bossCourses.find(x => x.id === courseId);
+            if (!c) { closeCourseDetail(); return; }
+
+            const el = document.getElementById('courseDetailView');
+            const coaches = c.coaches || [];
+            const dates = (c.dates || []).sort();
+            const dayNames = ['日','一','二','三','四','五','六'];
+            const now = new Date();
+            const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+
+            // Get related schedule entries + logs
+            const courseSchedules = bossSchedules.filter(s => s.courseId === courseId);
+            const courseLogs = bossLogs.filter(l => {
+                return courseSchedules.some(s => s.assignedToUid === l.uid && s.date === l.date && s.start === l.start);
+            });
+
+            let html = `
+                <div style="margin-bottom:15px;">
+                    <button class="btn-action" onclick="closeCourseDetail()" style="margin-bottom:10px;">← 返回列表</button>
+                </div>
+                <div class="course-detail-header">
+                    <div class="course-detail-name">${esc(c.name)}</div>
+                    <div class="course-detail-info">
+                        📍 ${esc(c.location || '未設定')} &nbsp; ⏰ ${esc(c.start)} - ${esc(c.end)}<br>
+                        👥 ${coaches.map(ch => esc(ch.name)).join(', ')}<br>
+                        📅 共 ${dates.length} 個日期
+                    </div>
+                </div>
+                <div style="display:flex; gap:8px; margin-bottom:15px;">
+                    <button class="btn-action" onclick="openCourseModal('${courseId}')">✏️ 編輯</button>
+                    ${c.status === 'active'
+                        ? `<button class="btn-action" onclick="archiveCourse('${courseId}')">📦 封存</button>`
+                        : `<button class="btn-action" onclick="unarchiveCourse('${courseId}')">♻️ 恢復</button>`}
+                    <button class="btn-action" style="color:#e53935" onclick="deleteCourse('${courseId}')">🗑️ 刪除</button>
+                </div>
+                <div class="date-coach-grid">`;
+
+            dates.forEach(date => {
+                const dow = dayNames[new Date(date + 'T00:00:00').getDay()];
+                const isPast = date < todayStr;
+                html += `<div class="date-row">
+                    <div class="date-row-header">
+                        <span>${date} (${dow})</span>
+                        ${isPast ? '<span style="font-size:0.75em;color:#999">已過</span>' : ''}
+                    </div>
+                    <div class="date-row-coaches">`;
+
+                coaches.forEach(coach => {
+                    // Find the schedule entry for this date + coach
+                    const sch = courseSchedules.find(s => s.date === date && (s.assignedToUid === coach.uid || s.originalCoachUid === coach.uid));
+                    const isSubbed = sch && sch.isSub && sch.originalCoachUid === coach.uid;
+
+                    if (isSubbed) {
+                        // This coach was replaced by a sub
+                        const subCoach = allCoaches.find(c2 => c2.uid === sch.assignedToUid);
+                        const subName = subCoach ? (subCoach.name || subCoach.email) : sch.assignedToUid;
+                        html += `<span class="coach-status-chip is-sub" onclick="openSubCoachModal('${courseId}','${date}','${coach.uid}','${sch.id}')" title="點擊更改代課">
+                            ${esc(coach.name)} → ${esc(subName)} (代)
+                        </span>`;
+                    } else {
+                        // Check if logged
+                        const logged = courseLogs.some(l => l.uid === coach.uid && l.date === date);
+                        if (logged) {
+                            html += `<span class="coach-status-chip checked-in">✓ ${esc(coach.name)}</span>`;
+                        } else {
+                            html += `<span class="coach-status-chip pending" onclick="openSubCoachModal('${courseId}','${date}','${coach.uid}','${sch ? sch.id : ''}')" title="點擊安排代課">
+                                ${esc(coach.name)}
+                            </span>`;
+                        }
+                    }
+                });
+
+                html += `</div></div>`;
+            });
+
+            html += '</div>';
+            el.innerHTML = html;
+        }
+
+        // --- Substitute Coach ---
+        function openSubCoachModal(courseId, date, originalCoachUid, scheduleId) {
+            subModalCourseId = courseId;
+            subModalDate = date;
+            subModalOriginalCoachUid = originalCoachUid;
+            subModalScheduleId = scheduleId;
+
+            const originalCoach = allCoaches.find(c => c.uid === originalCoachUid);
+            document.getElementById('subCoachInfo').textContent =
+                `${date} — 替換 ${originalCoach ? (originalCoach.name || originalCoach.email) : originalCoachUid}`;
+
+            // Show available coaches (exclude original)
+            const el = document.getElementById('subCoachList');
+            const otherCoaches = allCoaches.filter(c => c.uid !== originalCoachUid);
+
+            let html = `<div class="sub-coach-item" onclick="revertSub()">
+                <div style="width:36px;height:36px;border-radius:50%;background:#e8f5e9;display:flex;align-items:center;justify-content:center;font-size:18px">↩</div>
+                <div><div style="font-weight:700;color:#2e7d32">取消代課（恢復原教練）</div></div>
+            </div>`;
+
+            otherCoaches.forEach(c => {
+                const avatar = c.photoURL
+                    ? `<img src="${esc(c.photoURL)}">`
+                    : '<div style="width:36px;height:36px;border-radius:50%;background:#eee;display:flex;align-items:center;justify-content:center;font-size:18px">👤</div>';
+                html += `<div class="sub-coach-item" onclick="assignSubCoach('${c.uid}')">
+                    ${avatar}
+                    <div><div style="font-weight:700">${esc(c.name || c.email)}</div><div style="font-size:0.8em;color:#999">${esc(c.email || '')}</div></div>
+                </div>`;
+            });
+
+            el.innerHTML = html;
+            document.getElementById('subCoachModal').style.display = 'flex';
+        }
+
+        function closeSubCoachModal() {
+            document.getElementById('subCoachModal').style.display = 'none';
+            subModalCourseId = null;
+        }
+
+        async function assignSubCoach(subUid) {
+            if (!subModalScheduleId) { alert('找不到排課條目'); closeSubCoachModal(); return; }
             try {
-                await db.collection('schedule').doc(scheduleId).delete();
+                showLoading();
+                await db.collection('schedule').doc(subModalScheduleId).update({
+                    assignedToUid: subUid,
+                    originalCoachUid: subModalOriginalCoachUid,
+                    isSub: true,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                hideLoading();
+                closeSubCoachModal();
+                showToast('已安排代課');
+                if (currentCourseDetailId) renderCourseDetail(currentCourseDetailId);
             } catch(e) {
+                hideLoading();
+                alert('操作失敗：' + e.message);
+            }
+        }
+
+        async function revertSub() {
+            if (!subModalScheduleId) { closeSubCoachModal(); return; }
+            try {
+                showLoading();
+                await db.collection('schedule').doc(subModalScheduleId).update({
+                    assignedToUid: subModalOriginalCoachUid,
+                    originalCoachUid: null,
+                    isSub: false,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                hideLoading();
+                closeSubCoachModal();
+                showToast('已恢復原教練');
+                if (currentCourseDetailId) renderCourseDetail(currentCourseDetailId);
+            } catch(e) {
+                hideLoading();
+                alert('操作失敗：' + e.message);
+            }
+        }
+
+        // --- Archive / Delete Course ---
+        async function archiveCourse(courseId) {
+            if (!confirm('確定封存此課程？')) return;
+            try {
+                showLoading();
+                await db.collection('courses').doc(courseId).update({ status: 'archived', updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+
+                // Optionally delete future unlogged schedule entries
+                const todayStr = new Date().toISOString().split('T')[0];
+                const futureSnap = await db.collection('schedule')
+                    .where('courseId', '==', courseId)
+                    .where('date', '>=', todayStr)
+                    .get();
+
+                if (futureSnap.size > 0 && confirm(`要刪除 ${futureSnap.size} 個未來排課條目嗎？`)) {
+                    for (let i = 0; i < futureSnap.docs.length; i += 450) {
+                        const batch = db.batch();
+                        futureSnap.docs.slice(i, i + 450).forEach(doc => batch.delete(doc.ref));
+                        await batch.commit();
+                    }
+                }
+                hideLoading();
+                showToast('課程已封存');
+                closeCourseDetail();
+            } catch(e) {
+                hideLoading();
+                alert('封存失敗：' + e.message);
+            }
+        }
+
+        async function unarchiveCourse(courseId) {
+            try {
+                await db.collection('courses').doc(courseId).update({ status: 'active', updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+                showToast('課程已恢復');
+                if (currentCourseDetailId) renderCourseDetail(currentCourseDetailId);
+            } catch(e) { alert('操作失敗：' + e.message); }
+        }
+
+        async function deleteCourse(courseId) {
+            if (!confirm('確定永久刪除此課程？所有相關排課條目也會被刪除。')) return;
+            try {
+                showLoading();
+                // Delete all schedule entries for this course
+                const snap = await db.collection('schedule').where('courseId', '==', courseId).get();
+                for (let i = 0; i < snap.docs.length; i += 450) {
+                    const batch = db.batch();
+                    snap.docs.slice(i, i + 450).forEach(doc => batch.delete(doc.ref));
+                    await batch.commit();
+                }
+                // Delete course
+                await db.collection('courses').doc(courseId).delete();
+                hideLoading();
+                showToast('課程已刪除');
+                closeCourseDetail();
+            } catch(e) {
+                hideLoading();
                 alert('刪除失敗：' + e.message);
             }
         }
