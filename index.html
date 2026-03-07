@@ -1597,6 +1597,7 @@
         let bossLogs = [];
         let unsubscribeBossSchedule = null;
         let unsubscribeBossLogs = null;
+        let unsubscribeBossLogsByName = null;
         let bossSelectedDate = null;
         let bossEditingScheduleId = null;
         let bossSelectedMonths = [];
@@ -1608,6 +1609,7 @@
         function initBossView() {
             if (unsubscribeBossSchedule) { unsubscribeBossSchedule(); unsubscribeBossSchedule = null; }
             if (unsubscribeBossLogs) { unsubscribeBossLogs(); unsubscribeBossLogs = null; }
+            if (unsubscribeBossLogsByName) { unsubscribeBossLogsByName(); unsubscribeBossLogsByName = null; }
 
             document.getElementById('app-content').style.display = 'none';
             document.getElementById('boss-content').style.display = 'block';
@@ -1637,13 +1639,36 @@
                     updateBossUI();
                 });
 
-            // Listen to logs where bossUid matches
+            // Listen to logs: query by bossUid AND by boss name, merge & deduplicate
+            const bossName = currentUser.displayName || currentUser.email;
+            let _logsByUid = [], _logsByName = [];
+
+            function _mergeBossLogs() {
+                const seen = new Set();
+                bossLogs = [];
+                [..._logsByUid, ..._logsByName].forEach(l => {
+                    if (!seen.has(l.id)) { seen.add(l.id); bossLogs.push(l); }
+                });
+                updateBossUI();
+            }
+
+            // Query 1: logs where bossUid matches (proper linkage)
             unsubscribeBossLogs = db.collection('logs')
                 .where('bossUid', '==', currentUser.uid)
                 .onSnapshot(snap => {
-                    bossLogs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    updateBossUI();
-                });
+                    _logsByUid = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    _mergeBossLogs();
+                }, err => { console.error('Boss logs (uid) error:', err); });
+
+            // Query 2: logs where boss name matches (fallback for legacy/unlinked logs)
+            if (bossName) {
+                unsubscribeBossLogsByName = db.collection('logs')
+                    .where('boss', '==', bossName)
+                    .onSnapshot(snap => {
+                        _logsByName = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        _mergeBossLogs();
+                    }, err => { console.error('Boss logs (name) error:', err); });
+            }
         }
 
         function switchBossTab(tabName, el) {
