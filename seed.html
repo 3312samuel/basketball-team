@@ -403,17 +403,47 @@
             document.querySelectorAll('button').forEach(b => b.disabled = true);
             print('清除測試資料…', 'info');
 
+            const uid = auth.currentUser ? auth.currentUser.uid : '';
             let count = 0;
-            for (const col of ['logs', 'schedule', 'courses', 'users']) {
-                const snap = await db.collection(col).get();
-                for (const doc of snap.docs) {
+
+            // courses & users: simple read rules, can get() all
+            for (const col of ['courses', 'users']) {
+                try {
+                    const snap = await db.collection(col).get();
+                    for (const doc of snap.docs) {
+                        if (doc.id.startsWith('seed_')) {
+                            await doc.ref.delete();
+                            print(`  ✓ 刪除 ${col}/${doc.id}`, 'ok');
+                            count++;
+                        }
+                    }
+                } catch(e) { print(`  ✗ ${col}: ${e.message}`, 'err'); }
+            }
+
+            // logs: must query by bossUid to satisfy read rules
+            try {
+                const logSnap = await db.collection('logs').where('bossUid', '==', uid).get();
+                for (const doc of logSnap.docs) {
                     if (doc.id.startsWith('seed_')) {
                         await doc.ref.delete();
-                        print(`  ✓ 刪除 ${col}/${doc.id}`, 'ok');
+                        print(`  ✓ 刪除 logs/${doc.id}`, 'ok');
                         count++;
                     }
                 }
-            }
+            } catch(e) { print(`  ✗ logs: ${e.message}`, 'err'); }
+
+            // schedule: must query by createdByUid to satisfy read rules
+            try {
+                const schSnap = await db.collection('schedule').where('createdByUid', '==', uid).get();
+                for (const doc of schSnap.docs) {
+                    if (doc.id.startsWith('seed_')) {
+                        await doc.ref.delete();
+                        print(`  ✓ 刪除 schedule/${doc.id}`, 'ok');
+                        count++;
+                    }
+                }
+            } catch(e) { print(`  ✗ schedule: ${e.message}`, 'err'); }
+
             print(`\n完成！共刪除 ${count} 筆測試資料。`, 'info');
             document.querySelectorAll('button').forEach(b => b.disabled = false);
         }
