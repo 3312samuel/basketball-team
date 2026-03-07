@@ -221,6 +221,10 @@
         }
         .toggle-btn:active { transform: scale(0.96); opacity: 0.8; }
 
+        /* Date range inputs */
+        .date-range-row { display:flex; gap:8px; margin:0 0 12px; align-items:center; }
+        .date-range-row input[type="date"] { flex:1; padding:10px; border:1px solid var(--border); border-radius:10px; font-size:0.9em; background:white; }
+
         /* Floating Action Button */
         .fab-btn {
             position: fixed; bottom: calc(80px + var(--safe-bottom)); right: 20px;
@@ -300,6 +304,7 @@
             body.print-coach #tab-schedule { display: none !important; }
             body.print-coach #tab-list { display: block !important; }
             body.print-coach #logListContainer { display: none !important; }
+            body.print-coach #coachDateToggle, body.print-coach #dateRangeRow, body.print-coach #subFilters, body.print-coach #locationFilters { display: none !important; }
             body.print-coach .card { display: none !important; }
             body.print-coach .print-report { display: block; font-family: sans-serif; }
 
@@ -311,6 +316,7 @@
             body.print-boss #boss-content header { display: none !important; }
             body.print-boss #boss-content .bottom-nav { display: none !important; }
             body.print-boss .card { display: none !important; }
+            body.print-boss #bossReportToggle { display: none !important; }
             body.print-boss #bossReportContent { display: block !important; }
             body.print-boss #bossReportContent .card { display: block !important; background: white !important; color: black !important; box-shadow: none !important; border: 1px solid #ddd !important; }
             body.print-boss #bossReportContent .record-card { background: white !important; color: black !important; box-shadow: none !important; border: 1px solid #eee !important; }
@@ -334,6 +340,16 @@
             .print-table th { border-bottom: 1px solid #000; text-align: left; padding: 4px; }
             .print-table td { border-bottom: 1px solid #eee; padding: 6px 4px; }
             .print-total { margin-top: 20px; text-align: right; font-weight: bold; font-size: 16px; }
+
+            /* Print org header */
+            .print-org-header { text-align:center; font-size:18px; font-weight:900; margin-bottom:4px; padding-bottom:8px; border-bottom:3px double #000; }
+            .print-stats-table { width:100%; border-collapse:collapse; font-size:12px; margin:10px 0 16px; }
+            .print-stats-table th { background:#f5f5f5; padding:6px 8px; text-align:left; border:1px solid #ddd; font-weight:700; }
+            .print-stats-table td { padding:6px 8px; border:1px solid #ddd; }
+            .print-stats-table .total-row { background:#f5f5f5; font-weight:700; }
+            .print-signature { display:flex; justify-content:space-between; margin-top:40px; padding-top:20px; page-break-inside:avoid; }
+            .print-sig-box { text-align:center; width:40%; }
+            .print-sig-line { border-top:1px solid #000; margin-top:50px; padding-top:6px; font-size:11px; }
 
             /* Dark mode print reset */
             body.dark-mode { background: white !important; color: black !important; --light: #f7f7f7; --dark: #333; --border: #ddd; }
@@ -380,6 +396,7 @@
         body.dark-mode .google-btn { background: #333; color: #f0f0f0; border-color: #444; }
         body.dark-mode .login-subtitle { color: #aaa; }
         body.dark-mode input:focus { box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.15); background: #3a3a3a; }
+        body.dark-mode .date-range-row input[type="date"] { background: #333; color: #f0f0f0; border-color: #444; }
 
         /* Touch Feedback */
         .record-card { transition: transform 0.1s ease; }
@@ -644,6 +661,21 @@
             <div style="color:var(--primary); font-size:0.9em; font-weight:700;">更改 &gt;</div>
         </div>
 
+        <div class="view-toggle" style="margin-top:12px" id="coachDateToggle">
+            <div class="toggle-btn active" onclick="setCoachFilterMode('month')">按月份</div>
+            <div class="toggle-btn" onclick="setCoachFilterMode('dateRange')">自訂日期</div>
+        </div>
+        <div id="dateRangeRow" class="date-range-row" style="display:none">
+            <input type="date" id="coachDateStart" onchange="applyDateRange()">
+            <span style="color:#999;font-size:0.9em">至</span>
+            <input type="date" id="coachDateEnd" onchange="applyDateRange()">
+        </div>
+        <div id="subFilters" style="margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap">
+            <span class="filter-chip active" data-mode="all" onclick="setSubFilter('all')">全部</span>
+            <span class="filter-chip" data-mode="normal" onclick="setSubFilter('normal')">正常</span>
+            <span class="filter-chip" data-mode="sub" onclick="setSubFilter('sub')">代課</span>
+        </div>
+
         <div class="card" style="background:linear-gradient(135deg, #2c2c2c 0%, #3a3a3a 100%); color:white;">
             <div style="display:flex; justify-content:space-between; margin-bottom:10px; opacity:0.8; font-size:0.9em;">
                 <span>總結</span>
@@ -653,11 +685,13 @@
             <div id="breakdownContainer" style="font-size:0.85em; opacity:0.8; line-height:1.6; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;"></div>
         </div>
 
+        <div id="locationFilters" class="course-filters" style="margin-bottom:4px"></div>
         <div id="courseFilters" class="course-filters"></div>
         <div id="printReport" class="print-report"></div>
         <div id="logListContainer"></div>
         
         <div class="tools-area" style="text-align:center; margin-top:30px;">
+            <button class="btn-action" onclick="setPrintOrgName()"><svg class="icon-sm" viewBox="0 0 24 24"><path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"/></svg> 機構</button>
             <button class="btn-action" onclick="startPrint()"><svg class="icon-sm" viewBox="0 0 24 24"><path d="M19 8h-1V3H6v5H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zM8 5h8v3H8V5zm8 12v2H8v-2h8zm2-2v-2H6v2H4v-4c0-.55.45-1 1-1h14c.55 0 1 .45 1 1v4h-2z"/></svg> 列印</button>
             <button class="btn-action" onclick="exportData()"><svg class="icon-sm" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg> 備份</button>
             <button class="btn-action" onclick="exportCSV()"><svg class="icon-sm" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg> CSV</button>
@@ -747,12 +781,17 @@
         <div id="boss-tab-report" class="tab-content">
             <header>
                 <h1>工時報表</h1>
+                <button class="today-btn-small" onclick="setPrintOrgName()">機構</button>
                 <button class="today-btn-small" onclick="startBossPrint()">列印</button>
             </header>
             <div class="card">
                 <button class="btn-action" onclick="openBossMonthPicker()">
                     <span id="bossMonthLabel">選擇月份</span>
                 </button>
+            </div>
+            <div class="view-toggle" style="margin-top:12px" id="bossReportToggle">
+                <div class="toggle-btn active" onclick="setBossReportView('byCoach')">按教練</div>
+                <div class="toggle-btn" onclick="setBossReportView('byCourse')">按課程</div>
             </div>
             <div id="bossPrintReport" class="boss-print-report"></div>
             <div id="bossReportContent"></div>
@@ -884,6 +923,12 @@
         
         let selectedCourses = new Set();
         let lastFilterKey = '';
+        let coachFilterMode = 'month'; // 'month' | 'dateRange'
+        let coachDateRangeStart = '';
+        let coachDateRangeEnd = '';
+        let selectedLocations = new Set();
+        let coachSubFilter = 'all'; // 'all' | 'normal' | 'sub'
+        let printOrgName = localStorage.getItem('printOrgName') || '';
         let currentEditingId = null;
         let userRole = 'coach'; // 'boss' | 'coach'
         let allCoaches = []; // populated for boss view
@@ -1054,38 +1099,114 @@
             if (cb) cb(months);
         }
 
+        function setCoachFilterMode(mode) {
+            coachFilterMode = mode;
+            document.querySelectorAll('#coachDateToggle .toggle-btn').forEach((btn, i) => {
+                btn.classList.toggle('active', (i === 0 && mode === 'month') || (i === 1 && mode === 'dateRange'));
+            });
+            const monthSel = document.querySelector('#tab-list .month-selector');
+            const dateRange = document.getElementById('dateRangeRow');
+            if (mode === 'month') {
+                if (monthSel) monthSel.style.display = '';
+                if (dateRange) dateRange.style.display = 'none';
+            } else {
+                if (monthSel) monthSel.style.display = 'none';
+                if (dateRange) dateRange.style.display = 'flex';
+            }
+            renderLogList();
+        }
+
+        function applyDateRange() {
+            coachDateRangeStart = document.getElementById('coachDateStart').value;
+            coachDateRangeEnd = document.getElementById('coachDateEnd').value;
+            if (coachDateRangeStart && coachDateRangeEnd) renderLogList();
+        }
+
+        function setSubFilter(mode) {
+            coachSubFilter = mode;
+            document.querySelectorAll('#subFilters .filter-chip').forEach(chip => {
+                chip.classList.toggle('active', chip.dataset.mode === mode);
+            });
+            renderLogList();
+        }
+
+        function setPrintOrgName() {
+            const current = localStorage.getItem('printOrgName') || '';
+            const name = prompt('輸入機構名稱（列印時顯示）：', current);
+            if (name !== null) {
+                printOrgName = name.trim();
+                localStorage.setItem('printOrgName', printOrgName);
+                showToast(printOrgName ? '機構名稱：' + printOrgName : '已清除機構名稱');
+            }
+        }
+
         function renderLogList() {
             const container = document.getElementById('logListContainer');
             const breakdown = document.getElementById('breakdownContainer');
             const title = document.getElementById('reportMonthTitle');
             const filterBoss = document.getElementById('filterBoss').value;
-            
+
             // Set Title
-            if(selectedMonths.length === 1) {
+            if (coachFilterMode === 'dateRange' && coachDateRangeStart && coachDateRangeEnd) {
+                title.innerText = `${coachDateRangeStart} 至 ${coachDateRangeEnd}`;
+            } else if(selectedMonths.length === 1) {
                 const [y, m] = selectedMonths[0].split('-');
                 title.innerText = `${y}年 ${parseInt(m)}月`;
             } else {
                 title.innerText = `已選 ${selectedMonths.length} 個月份`;
             }
 
-            // 1. Filter Logs
+            // 1. Filter by date + boss + sub
             const rawLogs = logs.filter(e => {
-                const m = e.date.substring(0, 7);
+                let dateMatch;
+                if (coachFilterMode === 'dateRange' && coachDateRangeStart && coachDateRangeEnd) {
+                    dateMatch = e.date >= coachDateRangeStart && e.date <= coachDateRangeEnd;
+                } else {
+                    dateMatch = selectedMonths.includes(e.date.substring(0, 7));
+                }
                 const bossMatch = (filterBoss === 'all' || e.boss === filterBoss);
-                return selectedMonths.includes(m) && bossMatch;
+                let subMatch = true;
+                if (coachSubFilter === 'normal') subMatch = !e.isSub;
+                else if (coachSubFilter === 'sub') subMatch = !!e.isSub;
+                return dateMatch && bossMatch && subMatch;
             }).sort((a,b) => new Date(b.date)-new Date(a.date));
 
-            // 2. Extract Courses (Logic same as before)
-            const availableCourses = [...new Set(rawLogs.map(e => e.course || '未分類'))].sort();
-            
-            // Check context change
-            const currentKey = `${selectedMonths.join(',')}_${filterBoss}`;
+            // 2. Location filters
+            const availableLocations = [...new Set(rawLogs.map(e => e.location).filter(Boolean))].sort();
+            const locContainer = document.getElementById('locationFilters');
+            if (availableLocations.length > 1) {
+                locContainer.style.display = '';
+                locContainer.innerHTML = '<span style="font-size:0.75em;color:#999;font-weight:700;margin-right:4px">地點</span>';
+                const locKey = availableLocations.join(',');
+                if (!locContainer.dataset.key || locContainer.dataset.key !== locKey) {
+                    selectedLocations = new Set(availableLocations);
+                    locContainer.dataset.key = locKey;
+                }
+                availableLocations.forEach(loc => {
+                    const chip = document.createElement('span');
+                    chip.className = `filter-chip ${selectedLocations.has(loc)?'active':''}`;
+                    chip.innerText = loc;
+                    chip.onclick = () => {
+                        if (selectedLocations.has(loc)) {
+                            if (selectedLocations.size > 1) selectedLocations.delete(loc);
+                        } else selectedLocations.add(loc);
+                        renderLogList();
+                    };
+                    locContainer.appendChild(chip);
+                });
+            } else {
+                locContainer.style.display = 'none';
+            }
+            const locLogs = rawLogs.filter(e => !e.location || availableLocations.length <= 1 || selectedLocations.has(e.location));
+
+            // 3. Course filters
+            const availableCourses = [...new Set(locLogs.map(e => e.course || '未分類'))].sort();
+            const currentKey = `${coachFilterMode === 'dateRange' ? coachDateRangeStart+'_'+coachDateRangeEnd : selectedMonths.join(',')}_${filterBoss}_${coachSubFilter}`;
             if (currentKey !== lastFilterKey) {
                 selectedCourses = new Set(availableCourses);
                 lastFilterKey = currentKey;
             }
 
-            // Render Filters
             const filterContainer = document.getElementById('courseFilters');
             filterContainer.innerHTML = '';
             if (availableCourses.length > 0) {
@@ -1104,17 +1225,17 @@
                 });
             } else { filterContainer.innerHTML = '<span style="color:#bbb;font-size:0.8em;">無課程可篩選</span>'; }
 
-            const filteredLogs = rawLogs.filter(e => selectedCourses.has(e.course || '未分類'));
+            const filteredLogs = locLogs.filter(e => selectedCourses.has(e.course || '未分類'));
 
             // Render List
             container.innerHTML = ''; breakdown.innerHTML = '';
             let total = 0; let bMap = {};
 
-            if(filteredLogs.length === 0){ 
-                container.innerHTML='<div style="text-align:center;padding:60px 20px;color:#ccc;"><svg width="48" height="48" viewBox="0 0 24 24" fill="#e0e0e0" style="margin-bottom:12px;"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 9h-2v2H9v-2H7v-2h2V7h2v2h2v2zm-2 7H8v-2h3v2zm5 0h-3v-2h3v2zm0-4H8v-2h8v2zm-1-7V3.5L18.5 9H13z"/></svg><div style="font-size:0.95em;font-weight:600;">尚無記錄</div><div style="font-size:0.8em;margin-top:4px;">此月份暫無符合的記錄</div></div>';
+            if(filteredLogs.length === 0){
+                container.innerHTML='<div style="text-align:center;padding:60px 20px;color:#ccc;"><svg width="48" height="48" viewBox="0 0 24 24" fill="#e0e0e0" style="margin-bottom:12px;"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 9h-2v2H9v-2H7v-2h2V7h2v2h2v2zm-2 7H8v-2h3v2zm5 0h-3v-2h3v2zm0-4H8v-2h8v2zm-1-7V3.5L18.5 9H13z"/></svg><div style="font-size:0.95em;font-weight:600;">尚無記錄</div><div style="font-size:0.8em;margin-top:4px;">暫無符合的記錄</div></div>';
                 document.getElementById('totalHours').innerText="0.0";
                 renderPrintView([]);
-                return; 
+                return;
             }
 
             const parts = [];
@@ -1141,10 +1262,17 @@
             });
             container.innerHTML = parts.join('');
             document.getElementById('totalHours').innerText = total.toFixed(2);
+
+            // Breakdown with session counts and progress bars
             const bdParts = [];
-            Object.keys(bMap).forEach(k => bdParts.push(`<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>${esc(k)}</span><span>${bMap[k].toFixed(2)}</span></div>`));
-            breakdown.innerHTML = bdParts.join('');
-            
+            const maxH = Math.max(...Object.values(bMap), 0.1);
+            Object.keys(bMap).sort((a,b) => bMap[b]-bMap[a]).forEach(k => {
+                const pct = maxH > 0 ? (bMap[k] / maxH * 100) : 0;
+                const sessions = filteredLogs.filter(e => { let c = e.course || '未分類'; if(e.isSub) c += " (代課)"; return c === k; }).length;
+                bdParts.push(`<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;margin-bottom:2px"><span>${esc(k)}</span><span>${sessions}堂 / ${bMap[k].toFixed(1)}h</span></div><div style="height:4px;background:rgba(255,255,255,0.15);border-radius:2px;overflow:hidden"><div style="height:100%;width:${pct}%;background:rgba(255,255,255,0.6);border-radius:2px"></div></div></div>`);
+            });
+            breakdown.innerHTML = `<div style="margin-bottom:6px;font-weight:600">${filteredLogs.length} 堂</div>` + bdParts.join('');
+
             renderPrintView(filteredLogs);
         }
 
@@ -1159,7 +1287,9 @@
             
             // Title Logic
             let titleStr = "";
-            if(selectedMonths.length === 1) {
+            if (coachFilterMode === 'dateRange' && coachDateRangeStart && coachDateRangeEnd) {
+                titleStr = `${coachDateRangeStart} 至 ${coachDateRangeEnd} 工作報表`;
+            } else if(selectedMonths.length === 1) {
                 const [y, m] = selectedMonths[0].split('-');
                 titleStr = `${y}年${parseInt(m)}月 工作報表`;
             } else if (selectedMonths.length > 0) {
@@ -1168,7 +1298,9 @@
                 titleStr = `${start} 至 ${end} 工作報表 (${selectedMonths.length}個月)`;
             }
 
-            let html = `
+            let html = '';
+            if (printOrgName) html += `<div class="print-org-header">${esc(printOrgName)}</div>`;
+            html += `
                 <div class="print-header">
                     <div class="print-title">${titleStr}</div>
                     <div class="print-meta">
@@ -1178,6 +1310,15 @@
                     </div>
                 </div>
             `;
+
+            // Stats summary table
+            const courseStats = {};
+            logs.forEach(l => { const c = l.course || '未分類'; if (!courseStats[c]) courseStats[c] = { count: 0, hours: 0 }; courseStats[c].count++; courseStats[c].hours += parseFloat(l.hours); });
+            html += '<table class="print-stats-table"><thead><tr><th>課程</th><th>堂數</th><th>時數</th></tr></thead><tbody>';
+            Object.entries(courseStats).sort((a,b) => b[1].hours - a[1].hours).forEach(([c, s]) => {
+                html += `<tr><td>${esc(c)}</td><td>${s.count}</td><td>${s.hours.toFixed(1)}</td></tr>`;
+            });
+            html += `<tr class="total-row"><td>合計</td><td>${logs.length}</td><td>${totalH}</td></tr></tbody></table>`;
 
             // Print Calendar (Multi-month support)
             // Sort months to print calendars in order
@@ -1240,6 +1381,7 @@
             });
             html += `</tbody></table>`;
             html += `<div class="print-total">總計: ${totalH} 小時</div>`;
+            html += `<div class="print-signature"><div class="print-sig-box"><div class="print-sig-line">教練簽名</div></div><div class="print-sig-box"><div class="print-sig-line">負責人簽名</div></div></div>`;
 
             pContainer.innerHTML = html;
         }
@@ -1573,6 +1715,7 @@
         let bossEditingScheduleId = null;
         let bossSelectedMonths = [];
         let courseStatusFilter = 'all'; // 'all' | 'active' | 'archived'
+        let bossReportViewMode = 'byCoach'; // 'byCoach' | 'byCourse'
 
         // Init default month for boss reports
         const _bossNow = new Date();
@@ -2359,6 +2502,14 @@
             renderPickerGrid();
         }
 
+        function setBossReportView(mode) {
+            bossReportViewMode = mode;
+            document.querySelectorAll('#bossReportToggle .toggle-btn').forEach((btn, i) => {
+                btn.classList.toggle('active', (i === 0 && mode === 'byCoach') || (i === 1 && mode === 'byCourse'));
+            });
+            renderBossReport();
+        }
+
         function renderBossReport() {
             const el = document.getElementById('bossReportContent');
             if (!el) return;
@@ -2373,50 +2524,130 @@
                 return;
             }
 
-            // Group by coach uid
-            const byCoach = {};
-            filteredLogs.forEach(l => {
-                if (!byCoach[l.uid]) byCoach[l.uid] = [];
-                byCoach[l.uid].push(l);
-            });
-
+            const grandTotalHours = filteredLogs.reduce((s, l) => s + parseFloat(l.hours || 0), 0);
+            const grandTotalSessions = filteredLogs.length;
+            const colors = ['#ff6b00', '#2196f3', '#4caf50', '#9c27b0', '#f44336', '#009688', '#ff9800', '#673ab7'];
             let html = '';
-            Object.entries(byCoach).forEach(([uid, coachLogs]) => {
-                const coach = allCoaches.find(c => c.uid === uid);
-                const name = coach ? (coach.name || coach.email) : uid;
-                const total = coachLogs.reduce((s, l) => s + parseFloat(l.hours || 0), 0);
 
-                // Hours by course
+            if (bossReportViewMode === 'byCourse') {
+                // Group by course
                 const byCourse = {};
-                coachLogs.forEach(l => {
-                    if (!byCourse[l.course]) byCourse[l.course] = 0;
-                    byCourse[l.course] += parseFloat(l.hours || 0);
+                filteredLogs.forEach(l => {
+                    const c = l.course || '未命名';
+                    if (!byCourse[c]) byCourse[c] = [];
+                    byCourse[c].push(l);
                 });
 
-                const courseRows = Object.entries(byCourse)
-                    .sort((a,b) => b[1]-a[1])
-                    .map(([c, h]) => `<div style="display:flex;justify-content:space-between;padding:3px 0"><span>${esc(c || '未命名')}</span><span style="font-weight:600">${h.toFixed(1)}h</span></div>`)
-                    .join('');
+                let ci = 0;
+                Object.entries(byCourse).sort((a,b) => b[1].length - a[1].length).forEach(([course, courseLogs]) => {
+                    const courseTotal = courseLogs.reduce((s, l) => s + parseFloat(l.hours || 0), 0);
+                    const color = colors[ci++ % colors.length];
 
-                const logRows = coachLogs
-                    .sort((a,b) => (a.date||'').localeCompare(b.date||''))
-                    .map(l => `
-                        <div class="record-card">
-                            <div class="record-info">
-                                <div class="record-title">${esc(l.course || '未命名')}</div>
-                                <div class="record-meta">${esc(l.date || '')} &nbsp; ${esc(l.start || '')}–${esc(l.end || '')} &nbsp; ${esc(l.location || '')}</div>
-                            </div>
-                            <div class="hours-badge">${parseFloat(l.hours||0).toFixed(1)}h</div>
-                        </div>`).join('');
+                    const byCoach = {};
+                    courseLogs.forEach(l => {
+                        if (!byCoach[l.uid]) byCoach[l.uid] = { hours: 0, count: 0 };
+                        byCoach[l.uid].hours += parseFloat(l.hours || 0);
+                        byCoach[l.uid].count++;
+                    });
 
-                html += `
-                    <div class="card" style="margin-bottom:8px">
-                        <div style="font-weight:800;font-size:1.1em;margin-bottom:10px">${esc(name)}</div>
-                        <div style="background:#f7f7f7;padding:10px;border-radius:8px;margin-bottom:10px;font-size:0.9em">${courseRows}</div>
-                        <div style="font-weight:800;color:var(--primary);text-align:right">合計：${total.toFixed(1)} 小時</div>
-                    </div>
-                    ${logRows}`;
-            });
+                    const coachRows = Object.entries(byCoach)
+                        .sort((a,b) => b[1].hours - a[1].hours)
+                        .map(([uid, data]) => {
+                            const coach = allCoaches.find(c => c.uid === uid);
+                            const name = coach ? (coach.name || coach.email) : uid;
+                            const pct = courseTotal > 0 ? (data.hours / courseTotal * 100) : 0;
+                            return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0">
+                                <span style="flex:1;font-size:0.9em">${esc(name)}</span>
+                                <div style="flex:1;height:6px;background:#eee;border-radius:3px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${color};border-radius:3px"></div></div>
+                                <span style="font-weight:600;font-size:0.85em;min-width:80px;text-align:right">${data.count} 堂 / ${data.hours.toFixed(1)}h</span>
+                            </div>`;
+                        }).join('');
+
+                    const logRows = courseLogs
+                        .sort((a,b) => (a.date||'').localeCompare(b.date||''))
+                        .map(l => {
+                            const coach = allCoaches.find(c => c.uid === l.uid);
+                            const cName = coach ? (coach.name || coach.email) : l.uid;
+                            return `<div class="record-card">
+                                <div class="record-info">
+                                    <div class="record-title">${esc(cName)}${l.isSub ? ' <span class="sub-tag">代課</span>' : ''}</div>
+                                    <div class="record-meta">${esc(l.date || '')} &nbsp; ${esc(l.start || '')}–${esc(l.end || '')} &nbsp; ${esc(l.location || '')}</div>
+                                </div>
+                                <div class="hours-badge">${parseFloat(l.hours||0).toFixed(1)}h</div>
+                            </div>`;
+                        }).join('');
+
+                    html += `
+                        <div class="card" style="margin-bottom:8px;border-left:4px solid ${color}">
+                            <div style="font-weight:800;font-size:1.1em;margin-bottom:10px">${esc(course)}</div>
+                            <div style="background:var(--light);padding:10px;border-radius:8px;margin-bottom:10px;font-size:0.9em">${coachRows}</div>
+                            <div style="font-weight:800;color:var(--primary);text-align:right">${courseLogs.length} 堂 / ${courseTotal.toFixed(1)} 小時</div>
+                        </div>
+                        ${logRows}`;
+                });
+
+            } else {
+                // By coach (default)
+                const byCoach = {};
+                filteredLogs.forEach(l => {
+                    if (!byCoach[l.uid]) byCoach[l.uid] = [];
+                    byCoach[l.uid].push(l);
+                });
+
+                let ci = 0;
+                Object.entries(byCoach).forEach(([uid, coachLogs]) => {
+                    const coach = allCoaches.find(c => c.uid === uid);
+                    const name = coach ? (coach.name || coach.email) : uid;
+                    const total = coachLogs.reduce((s, l) => s + parseFloat(l.hours || 0), 0);
+                    const color = colors[ci++ % colors.length];
+
+                    const byCourse = {};
+                    coachLogs.forEach(l => {
+                        const c = l.course || '未命名';
+                        if (!byCourse[c]) byCourse[c] = { hours: 0, count: 0 };
+                        byCourse[c].hours += parseFloat(l.hours || 0);
+                        byCourse[c].count++;
+                    });
+
+                    const courseRows = Object.entries(byCourse)
+                        .sort((a,b) => b[1].hours - a[1].hours)
+                        .map(([c, data]) => {
+                            const pct = total > 0 ? (data.hours / total * 100) : 0;
+                            return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0">
+                                <span style="flex:1;font-size:0.9em">${esc(c)}</span>
+                                <div style="flex:1;height:6px;background:#eee;border-radius:3px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${color};border-radius:3px"></div></div>
+                                <span style="font-weight:600;font-size:0.85em;min-width:80px;text-align:right">${data.count} 堂 / ${data.hours.toFixed(1)}h</span>
+                            </div>`;
+                        }).join('');
+
+                    const logRows = coachLogs
+                        .sort((a,b) => (a.date||'').localeCompare(b.date||''))
+                        .map(l => `
+                            <div class="record-card">
+                                <div class="record-info">
+                                    <div class="record-title">${esc(l.course || '未命名')}${l.isSub ? ' <span class="sub-tag">代課</span>' : ''}</div>
+                                    <div class="record-meta">${esc(l.date || '')} &nbsp; ${esc(l.start || '')}–${esc(l.end || '')} &nbsp; ${esc(l.location || '')}</div>
+                                </div>
+                                <div class="hours-badge">${parseFloat(l.hours||0).toFixed(1)}h</div>
+                            </div>`).join('');
+
+                    html += `
+                        <div class="card" style="margin-bottom:8px;border-left:4px solid ${color}">
+                            <div style="font-weight:800;font-size:1.1em;margin-bottom:10px">${esc(name)}</div>
+                            <div style="background:var(--light);padding:10px;border-radius:8px;margin-bottom:10px;font-size:0.9em">${courseRows}</div>
+                            <div style="font-weight:800;color:var(--primary);text-align:right">${coachLogs.length} 堂 / ${total.toFixed(1)} 小時</div>
+                        </div>
+                        ${logRows}`;
+                });
+            }
+
+            // Grand total card
+            html += `
+                <div class="card" style="background:var(--dark);color:white;margin-top:16px;text-align:center">
+                    <div style="opacity:0.7;font-size:0.85em;margin-bottom:6px">所有教練總計</div>
+                    <div style="font-size:1.8em;font-weight:900">${grandTotalHours.toFixed(1)} <span style="font-size:0.5em;font-weight:500">小時</span></div>
+                    <div style="opacity:0.7;font-size:0.85em;margin-top:4px">${grandTotalSessions} 堂</div>
+                </div>`;
 
             el.innerHTML = html;
             } catch(err) {
@@ -2451,11 +2682,13 @@
 
             const totalH = filteredLogs.reduce((s, l) => s + parseFloat(l.hours || 0), 0);
 
-            let html = `
+            let html = '';
+            if (printOrgName) html += `<div class="print-org-header">${esc(printOrgName)}</div>`;
+            html += `
                 <div class="print-header">
                     <div class="print-title">${esc(titleStr)}</div>
                     <div class="print-meta">
-                        <div style="font-weight:700;">教練工時總覽</div>
+                        <div style="font-weight:700;">教練工時總覽（${bossReportViewMode === 'byCourse' ? '按課程' : '按教練'}）</div>
                         <div style="font-weight:700;">總計: ${totalH.toFixed(2)} hr</div>
                     </div>
                 </div>`;
@@ -2466,39 +2699,91 @@
                 return;
             }
 
-            // Group by coach
-            const byCoach = {};
+            // Stats summary table
+            const statRows = {};
             filteredLogs.forEach(l => {
-                if (!byCoach[l.uid]) byCoach[l.uid] = [];
-                byCoach[l.uid].push(l);
+                const coach = allCoaches.find(c => c.uid === l.uid);
+                const name = coach ? (coach.name || coach.email) : l.uid;
+                const course = l.course || '未命名';
+                const key = `${name}|||${course}`;
+                if (!statRows[key]) statRows[key] = { name, course, count: 0, hours: 0 };
+                statRows[key].count++;
+                statRows[key].hours += parseFloat(l.hours || 0);
             });
+            html += '<table class="print-stats-table"><thead><tr><th>教練</th><th>課程</th><th>堂數</th><th>時數</th></tr></thead><tbody>';
+            Object.values(statRows).sort((a,b) => a.name.localeCompare(b.name) || b.hours - a.hours).forEach(s => {
+                html += `<tr><td>${esc(s.name)}</td><td>${esc(s.course)}</td><td>${s.count}</td><td>${s.hours.toFixed(1)}</td></tr>`;
+            });
+            html += `<tr class="total-row"><td colspan="2">合計</td><td>${filteredLogs.length}</td><td>${totalH.toFixed(1)}</td></tr></tbody></table>`;
 
-            Object.entries(byCoach).forEach(([uid, coachLogs]) => {
-                const coach = allCoaches.find(c => c.uid === uid);
-                const name = coach ? (coach.name || coach.email) : uid;
-                const coachTotal = coachLogs.reduce((s, l) => s + parseFloat(l.hours || 0), 0);
+            const dayMap = ['日','一','二','三','四','五','六'];
 
-                html += `<div style="margin-top:20px; page-break-inside:avoid;">`;
-                html += `<div style="font-weight:800; font-size:1.1em; border-bottom:1px solid #000; padding-bottom:4px; margin-bottom:8px;">${esc(name)} — ${coachTotal.toFixed(1)} 小時</div>`;
-                html += `<table class="print-table"><thead><tr><th>日期</th><th>時間</th><th>地點</th><th>課程</th><th style="text-align:right">時數</th></tr></thead><tbody>`;
-
-                coachLogs.sort((a, b) => (a.date || '').localeCompare(b.date || '')).forEach(l => {
-                    const dObj = new Date((l.date || '') + 'T00:00:00');
-                    const dayMap = ['日','一','二','三','四','五','六'];
-                    const dateTxt = isNaN(dObj) ? l.date : `${dObj.getMonth()+1}/${dObj.getDate()} (${dayMap[dObj.getDay()]})`;
-                    html += `<tr>
-                        <td>${esc(dateTxt)}</td>
-                        <td>${esc(l.start || '')}-${esc(l.end || '')}</td>
-                        <td>${esc(l.location || '-')}</td>
-                        <td>${esc(l.course || '未命名')}</td>
-                        <td style="text-align:right">${parseFloat(l.hours || 0).toFixed(1)}</td>
-                    </tr>`;
+            if (bossReportViewMode === 'byCourse') {
+                // Print by course
+                const byCourse = {};
+                filteredLogs.forEach(l => {
+                    const c = l.course || '未命名';
+                    if (!byCourse[c]) byCourse[c] = [];
+                    byCourse[c].push(l);
                 });
 
-                html += `</tbody></table></div>`;
-            });
+                Object.entries(byCourse).sort((a,b) => b[1].length - a[1].length).forEach(([course, courseLogs]) => {
+                    const courseTotal = courseLogs.reduce((s, l) => s + parseFloat(l.hours || 0), 0);
+                    html += `<div style="margin-top:20px; page-break-inside:avoid;">`;
+                    html += `<div style="font-weight:800; font-size:1.1em; border-bottom:1px solid #000; padding-bottom:4px; margin-bottom:8px;">${esc(course)} — ${courseTotal.toFixed(1)} 小時 (${courseLogs.length} 堂)</div>`;
+                    html += `<table class="print-table"><thead><tr><th>日期</th><th>教練</th><th>時間</th><th>地點</th><th style="text-align:right">時數</th></tr></thead><tbody>`;
+
+                    courseLogs.sort((a, b) => (a.date || '').localeCompare(b.date || '')).forEach(l => {
+                        const dObj = new Date((l.date || '') + 'T00:00:00');
+                        const dateTxt = isNaN(dObj) ? l.date : `${dObj.getMonth()+1}/${dObj.getDate()} (${dayMap[dObj.getDay()]})`;
+                        const coach = allCoaches.find(c => c.uid === l.uid);
+                        const cName = coach ? (coach.name || coach.email) : l.uid;
+                        html += `<tr>
+                            <td>${esc(dateTxt)}</td>
+                            <td>${esc(cName)}${l.isSub ? ' (代)' : ''}</td>
+                            <td>${esc(l.start || '')}-${esc(l.end || '')}</td>
+                            <td>${esc(l.location || '-')}</td>
+                            <td style="text-align:right">${parseFloat(l.hours || 0).toFixed(1)}</td>
+                        </tr>`;
+                    });
+                    html += `</tbody></table></div>`;
+                });
+
+            } else {
+                // Print by coach (default)
+                const byCoach = {};
+                filteredLogs.forEach(l => {
+                    if (!byCoach[l.uid]) byCoach[l.uid] = [];
+                    byCoach[l.uid].push(l);
+                });
+
+                Object.entries(byCoach).forEach(([uid, coachLogs]) => {
+                    const coach = allCoaches.find(c => c.uid === uid);
+                    const name = coach ? (coach.name || coach.email) : uid;
+                    const coachTotal = coachLogs.reduce((s, l) => s + parseFloat(l.hours || 0), 0);
+
+                    html += `<div style="margin-top:20px; page-break-inside:avoid;">`;
+                    html += `<div style="font-weight:800; font-size:1.1em; border-bottom:1px solid #000; padding-bottom:4px; margin-bottom:8px;">${esc(name)} — ${coachTotal.toFixed(1)} 小時 (${coachLogs.length} 堂)</div>`;
+                    html += `<table class="print-table"><thead><tr><th>日期</th><th>時間</th><th>地點</th><th>課程</th><th style="text-align:right">時數</th></tr></thead><tbody>`;
+
+                    coachLogs.sort((a, b) => (a.date || '').localeCompare(b.date || '')).forEach(l => {
+                        const dObj = new Date((l.date || '') + 'T00:00:00');
+                        const dateTxt = isNaN(dObj) ? l.date : `${dObj.getMonth()+1}/${dObj.getDate()} (${dayMap[dObj.getDay()]})`;
+                        html += `<tr>
+                            <td>${esc(dateTxt)}</td>
+                            <td>${esc(l.start || '')}-${esc(l.end || '')}</td>
+                            <td>${esc(l.location || '-')}</td>
+                            <td>${esc(l.course || '未命名')}${l.isSub ? ' (代)' : ''}</td>
+                            <td style="text-align:right">${parseFloat(l.hours || 0).toFixed(1)}</td>
+                        </tr>`;
+                    });
+
+                    html += `</tbody></table></div>`;
+                });
+            }
 
             html += `<div class="print-total">總計: ${totalH.toFixed(2)} 小時</div>`;
+            html += `<div class="print-signature"><div class="print-sig-box"><div class="print-sig-line">負責人簽名</div></div><div class="print-sig-box"><div class="print-sig-line">日期</div></div></div>`;
             pContainer.innerHTML = html;
         }
 
