@@ -263,6 +263,35 @@
         }
         .filter-chip.active { background: var(--blue-bg); color: var(--blue); border-color: var(--blue); font-weight: 600; }
 
+        /* Collapsible Sections */
+        .collapsible-group { margin-bottom: 4px; }
+        .collapse-arrow {
+            background:none; border:none; cursor:pointer; padding:8px;
+            font-size:0.9em; color:#999; transition:transform 0.3s ease;
+            flex-shrink:0; min-width:36px; min-height:36px;
+            display:flex; align-items:center; justify-content:center;
+        }
+        .collapse-arrow.expanded { transform: rotate(180deg); }
+        .section-logs { max-height:0; overflow:hidden; transition:max-height 0.3s ease-out; }
+        .section-logs.expanded { max-height:5000px; transition:max-height 0.5s ease-in; }
+        .expand-all-btn {
+            background:white; border:1px solid var(--border); color:#555;
+            padding:8px 16px; border-radius:20px; font-size:0.85em;
+            font-weight:600; cursor:pointer; display:inline-flex;
+            align-items:center; gap:6px;
+        }
+        .coach-group-header {
+            background:white; border-radius:12px; padding:14px 16px;
+            margin-bottom:4px; display:flex; justify-content:space-between;
+            align-items:center; cursor:pointer; border:1px solid var(--border);
+            border-left:4px solid var(--primary); user-select:none;
+            box-shadow:0 2px 8px rgba(0,0,0,0.02);
+        }
+        .coach-group-header .group-info { flex:1; }
+        .coach-group-header .group-title { font-weight:700; font-size:1em; }
+        .coach-group-header .group-meta { font-size:0.85em; color:#888; margin-top:2px; }
+        .coach-group-header .group-hours { font-size:1.1em; font-weight:800; color:var(--primary); margin-right:4px; }
+
         .time-row { display: flex; gap: 10px; margin-bottom: 5px; }
         .time-row .form-group { flex: 1; margin-bottom: 0; }
 
@@ -304,7 +333,13 @@
             body.print-coach #tab-schedule { display: none !important; }
             body.print-coach #tab-list { display: block !important; }
             body.print-coach #logListContainer { display: none !important; }
-            body.print-coach #coachDateToggle, body.print-coach #dateRangeRow, body.print-coach #subFilters, body.print-coach #locationFilters { display: none !important; }
+            body.print-coach #coachDateToggle, body.print-coach #dateRangeRow, body.print-coach #subFilters, body.print-coach #locationFilters, body.print-coach #coachGroupToggle { display: none !important; }
+
+            /* Collapsible: always expanded in print */
+            .section-logs { max-height: none !important; overflow: visible !important; }
+            .collapse-arrow, .expand-all-btn { display: none !important; }
+            .coach-group-header { border: 1px solid #ddd !important; background: white !important; color: black !important; box-shadow: none !important; }
+            .coach-group-header .group-title { color: black !important; }
             body.print-coach .card { display: none !important; }
             body.print-coach .print-report { display: block; font-family: sans-serif; }
 
@@ -397,6 +432,10 @@
         body.dark-mode .login-subtitle { color: #aaa; }
         body.dark-mode input:focus { box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.15); background: #3a3a3a; }
         body.dark-mode .date-range-row input[type="date"] { background: #333; color: #f0f0f0; border-color: #444; }
+        body.dark-mode .expand-all-btn { background: #2c2c2c; color: #ccc; border-color: #444; }
+        body.dark-mode .coach-group-header { background: #2c2c2c; border-color: #3a3a3a; box-shadow: none; }
+        body.dark-mode .coach-group-header .group-title { color: #f0f0f0; }
+        body.dark-mode .collapse-arrow { color: #888; }
 
         /* Touch Feedback */
         .record-card { transition: transform 0.1s ease; }
@@ -675,6 +714,10 @@
             <span class="filter-chip" data-mode="normal" onclick="setSubFilter('normal')">正常</span>
             <span class="filter-chip" data-mode="sub" onclick="setSubFilter('sub')">代課</span>
         </div>
+        <div class="view-toggle" style="margin-top:4px;margin-bottom:8px" id="coachGroupToggle">
+            <div class="toggle-btn active" onclick="setCoachGroupMode('byDate')">按日期</div>
+            <div class="toggle-btn" onclick="setCoachGroupMode('byCourse')">按課程</div>
+        </div>
 
         <div class="card" style="background:linear-gradient(135deg, #2c2c2c 0%, #3a3a3a 100%); color:white;">
             <div style="display:flex; justify-content:space-between; margin-bottom:10px; opacity:0.8; font-size:0.9em;">
@@ -687,6 +730,7 @@
 
         <div id="locationFilters" class="course-filters" style="margin-bottom:4px"></div>
         <div id="courseFilters" class="course-filters"></div>
+        <div style="text-align:right;margin:8px 0" id="coachExpandAllContainer"></div>
         <div id="printReport" class="print-report"></div>
         <div id="logListContainer"></div>
         
@@ -793,6 +837,7 @@
                 <div class="toggle-btn active" onclick="setBossReportView('byCoach')">按教練</div>
                 <div class="toggle-btn" onclick="setBossReportView('byCourse')">按課程</div>
             </div>
+            <div style="text-align:right;margin-bottom:8px" id="bossExpandAllContainer"></div>
             <div id="bossPrintReport" class="boss-print-report"></div>
             <div id="bossReportContent"></div>
         </div>
@@ -928,6 +973,7 @@
         let coachDateRangeEnd = '';
         let selectedLocations = new Set();
         let coachSubFilter = 'all'; // 'all' | 'normal' | 'sub'
+        let coachGroupMode = 'byDate'; // 'byDate' | 'byCourse'
         let printOrgName = localStorage.getItem('printOrgName') || '';
         let currentEditingId = null;
         let userRole = 'coach'; // 'boss' | 'coach'
@@ -1140,6 +1186,49 @@
             }
         }
 
+        function toggleSection(sectionId) {
+            const logsEl = document.getElementById('section-logs-' + sectionId);
+            const arrowEl = document.getElementById('section-arrow-' + sectionId);
+            if (!logsEl) return;
+            logsEl.classList.toggle('expanded');
+            if (arrowEl) arrowEl.classList.toggle('expanded');
+            // Update the relevant expand-all button
+            const parent = logsEl.closest('#bossReportContent') || logsEl.closest('#logListContainer');
+            if (parent) {
+                const btnId = parent.id === 'bossReportContent' ? 'bossExpandAllContainer' : 'coachExpandAllContainer';
+                updateExpandAllButton(parent.id, btnId);
+            }
+        }
+
+        function toggleAllSections(containerId, btnContainerId) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            const sections = container.querySelectorAll('.section-logs');
+            const arrows = container.querySelectorAll('.collapse-arrow');
+            const anyCollapsed = Array.from(sections).some(s => !s.classList.contains('expanded'));
+            sections.forEach(s => { if (anyCollapsed) s.classList.add('expanded'); else s.classList.remove('expanded'); });
+            arrows.forEach(a => { if (anyCollapsed) a.classList.add('expanded'); else a.classList.remove('expanded'); });
+            updateExpandAllButton(containerId, btnContainerId);
+        }
+
+        function updateExpandAllButton(containerId, btnContainerId) {
+            const container = document.getElementById(containerId);
+            const btnContainer = document.getElementById(btnContainerId);
+            if (!container || !btnContainer) return;
+            const sections = container.querySelectorAll('.section-logs');
+            if (sections.length === 0) { btnContainer.innerHTML = ''; return; }
+            const anyCollapsed = Array.from(sections).some(s => !s.classList.contains('expanded'));
+            btnContainer.innerHTML = `<button class="expand-all-btn" onclick="toggleAllSections('${containerId}','${btnContainerId}')">${anyCollapsed ? '展開全部 ▼' : '收起全部 ▲'}</button>`;
+        }
+
+        function setCoachGroupMode(mode) {
+            coachGroupMode = mode;
+            document.querySelectorAll('#coachGroupToggle .toggle-btn').forEach((btn, i) => {
+                btn.classList.toggle('active', (i === 0 && mode === 'byDate') || (i === 1 && mode === 'byCourse'));
+            });
+            renderLogList();
+        }
+
         function renderLogList() {
             const container = document.getElementById('logListContainer');
             const breakdown = document.getElementById('breakdownContainer');
@@ -1238,29 +1327,13 @@
                 return;
             }
 
-            const parts = [];
+            // Calculate totals first
             filteredLogs.forEach(e => {
                 let h = parseFloat(e.hours); total += h;
                 let c = e.course || '未分類';
                 if(e.isSub) c += " (代課)";
                 bMap[c] = (bMap[c]||0)+h;
-
-                const subClass = e.isSub ? 'is-sub' : '';
-                const subTag = e.isSub ? '<span class="sub-tag">代課</span>' : '';
-                const locationTxt = e.location ? `<span class="record-tag">📍 ${esc(e.location)}</span>` : '';
-
-                parts.push(`
-                    <div class="record-card ${subClass}">
-                        <div class="record-info">
-                            <div class="record-meta">${esc(e.date)}</div>
-                            <div class="record-title">${esc(e.boss)} ${subTag} ${e.course?`<span class="record-tag">${esc(e.course)}</span>`:''} ${locationTxt}</div>
-                            <div class="record-meta">${esc(e.start)}-${esc(e.end)} ${esc(e.note||'')}</div>
-                        </div>
-                        <div class="hours-badge">${esc(e.hours)}</div>
-                        <button class="delete-btn" onclick="deleteLog('${e.id}')"><svg class="icon" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>
-                    </div>`);
             });
-            container.innerHTML = parts.join('');
             document.getElementById('totalHours').innerText = total.toFixed(2);
 
             // Breakdown with session counts and progress bars
@@ -1272,6 +1345,85 @@
                 bdParts.push(`<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;margin-bottom:2px"><span>${esc(k)}</span><span>${sessions}堂 / ${bMap[k].toFixed(1)}h</span></div><div style="height:4px;background:rgba(255,255,255,0.15);border-radius:2px;overflow:hidden"><div style="height:100%;width:${pct}%;background:rgba(255,255,255,0.6);border-radius:2px"></div></div></div>`);
             });
             breakdown.innerHTML = `<div style="margin-bottom:6px;font-weight:600">${filteredLogs.length} 堂</div>` + bdParts.join('');
+
+            // Helper to render a single record-card
+            const renderCard = (e) => {
+                const subClass = e.isSub ? 'is-sub' : '';
+                const subTag = e.isSub ? '<span class="sub-tag">代課</span>' : '';
+                const locationTxt = e.location ? `<span class="record-tag">📍 ${esc(e.location)}</span>` : '';
+                return `<div class="record-card ${subClass}">
+                    <div class="record-info">
+                        <div class="record-meta">${esc(e.date)}</div>
+                        <div class="record-title">${esc(e.boss)} ${subTag} ${e.course?`<span class="record-tag">${esc(e.course)}</span>`:''} ${locationTxt}</div>
+                        <div class="record-meta">${esc(e.start)}-${esc(e.end)} ${esc(e.note||'')}</div>
+                    </div>
+                    <div class="hours-badge">${esc(e.hours)}</div>
+                    <button class="delete-btn" onclick="deleteLog('${e.id}')"><svg class="icon" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>
+                </div>`;
+            };
+
+            const dayMap = ['日','一','二','三','四','五','六'];
+            const parts = [];
+
+            if (coachGroupMode === 'byDate') {
+                // Group by date
+                const byDate = {};
+                filteredLogs.forEach(e => { if (!byDate[e.date]) byDate[e.date] = []; byDate[e.date].push(e); });
+                const sortedDates = Object.keys(byDate).sort((a,b) => b.localeCompare(a));
+
+                sortedDates.forEach((date, idx) => {
+                    const group = byDate[date];
+                    const groupHours = group.reduce((s, e) => s + parseFloat(e.hours), 0);
+                    const dObj = new Date(date + 'T00:00:00');
+                    const dayStr = isNaN(dObj) ? '' : ` (${dayMap[dObj.getDay()]})`;
+                    const sid = 'coach-d-' + idx;
+
+                    parts.push(`<div class="collapsible-group">
+                        <div class="coach-group-header" onclick="toggleSection('${sid}')">
+                            <div class="group-info">
+                                <div class="group-title">${esc(date)}${dayStr}</div>
+                                <div class="group-meta">${group.length} 堂</div>
+                            </div>
+                            <div class="group-hours">${groupHours.toFixed(1)}h</div>
+                            <button class="collapse-arrow" id="section-arrow-${sid}" onclick="event.stopPropagation();toggleSection('${sid}')">▼</button>
+                        </div>
+                        <div class="section-logs" id="section-logs-${sid}">`);
+                    group.forEach(e => parts.push(renderCard(e)));
+                    parts.push('</div></div>');
+                });
+
+            } else {
+                // Group by course
+                const byCourseGroup = {};
+                filteredLogs.forEach(e => { const c = e.course || '未分類'; if (!byCourseGroup[c]) byCourseGroup[c] = []; byCourseGroup[c].push(e); });
+                const sortedCourses = Object.keys(byCourseGroup).sort((a,b) => {
+                    const ha = byCourseGroup[a].reduce((s,e) => s + parseFloat(e.hours), 0);
+                    const hb = byCourseGroup[b].reduce((s,e) => s + parseFloat(e.hours), 0);
+                    return hb - ha;
+                });
+
+                sortedCourses.forEach((course, idx) => {
+                    const group = byCourseGroup[course];
+                    const groupHours = group.reduce((s, e) => s + parseFloat(e.hours), 0);
+                    const sid = 'coach-c-' + idx;
+
+                    parts.push(`<div class="collapsible-group">
+                        <div class="coach-group-header" onclick="toggleSection('${sid}')">
+                            <div class="group-info">
+                                <div class="group-title">${esc(course)}</div>
+                                <div class="group-meta">${group.length} 堂</div>
+                            </div>
+                            <div class="group-hours">${groupHours.toFixed(1)}h</div>
+                            <button class="collapse-arrow" id="section-arrow-${sid}" onclick="event.stopPropagation();toggleSection('${sid}')">▼</button>
+                        </div>
+                        <div class="section-logs" id="section-logs-${sid}">`);
+                    group.sort((a,b) => b.date.localeCompare(a.date)).forEach(e => parts.push(renderCard(e)));
+                    parts.push('</div></div>');
+                });
+            }
+
+            container.innerHTML = parts.join('');
+            updateExpandAllButton('logListContainer', 'coachExpandAllContainer');
 
             renderPrintView(filteredLogs);
         }
@@ -2577,13 +2729,21 @@
                             </div>`;
                         }).join('');
 
+                    const sid = 'boss-c-' + ci;
                     html += `
-                        <div class="card" style="margin-bottom:8px;border-left:4px solid ${color}">
-                            <div style="font-weight:800;font-size:1.1em;margin-bottom:10px">${esc(course)}</div>
-                            <div style="background:var(--light);padding:10px;border-radius:8px;margin-bottom:10px;font-size:0.9em">${coachRows}</div>
-                            <div style="font-weight:800;color:var(--primary);text-align:right">${courseLogs.length} 堂 / ${courseTotal.toFixed(1)} 小時</div>
-                        </div>
-                        ${logRows}`;
+                        <div class="collapsible-group">
+                            <div class="card" style="margin-bottom:0;border-left:4px solid ${color};cursor:pointer" onclick="toggleSection('${sid}')">
+                                <div style="display:flex;align-items:center">
+                                    <div style="flex:1">
+                                        <div style="font-weight:800;font-size:1.1em;margin-bottom:10px">${esc(course)}</div>
+                                        <div style="background:var(--light);padding:10px;border-radius:8px;margin-bottom:10px;font-size:0.9em">${coachRows}</div>
+                                        <div style="font-weight:800;color:var(--primary);text-align:right">${courseLogs.length} 堂 / ${courseTotal.toFixed(1)} 小時</div>
+                                    </div>
+                                    <button class="collapse-arrow" id="section-arrow-${sid}" onclick="event.stopPropagation();toggleSection('${sid}')">▼</button>
+                                </div>
+                            </div>
+                            <div class="section-logs" id="section-logs-${sid}">${logRows}</div>
+                        </div>`;
                 });
 
             } else {
@@ -2631,13 +2791,21 @@
                                 <div class="hours-badge">${parseFloat(l.hours||0).toFixed(1)}h</div>
                             </div>`).join('');
 
+                    const sid = 'boss-k-' + ci;
                     html += `
-                        <div class="card" style="margin-bottom:8px;border-left:4px solid ${color}">
-                            <div style="font-weight:800;font-size:1.1em;margin-bottom:10px">${esc(name)}</div>
-                            <div style="background:var(--light);padding:10px;border-radius:8px;margin-bottom:10px;font-size:0.9em">${courseRows}</div>
-                            <div style="font-weight:800;color:var(--primary);text-align:right">${coachLogs.length} 堂 / ${total.toFixed(1)} 小時</div>
-                        </div>
-                        ${logRows}`;
+                        <div class="collapsible-group">
+                            <div class="card" style="margin-bottom:0;border-left:4px solid ${color};cursor:pointer" onclick="toggleSection('${sid}')">
+                                <div style="display:flex;align-items:center">
+                                    <div style="flex:1">
+                                        <div style="font-weight:800;font-size:1.1em;margin-bottom:10px">${esc(name)}</div>
+                                        <div style="background:var(--light);padding:10px;border-radius:8px;margin-bottom:10px;font-size:0.9em">${courseRows}</div>
+                                        <div style="font-weight:800;color:var(--primary);text-align:right">${coachLogs.length} 堂 / ${total.toFixed(1)} 小時</div>
+                                    </div>
+                                    <button class="collapse-arrow" id="section-arrow-${sid}" onclick="event.stopPropagation();toggleSection('${sid}')">▼</button>
+                                </div>
+                            </div>
+                            <div class="section-logs" id="section-logs-${sid}">${logRows}</div>
+                        </div>`;
                 });
             }
 
@@ -2650,6 +2818,7 @@
                 </div>`;
 
             el.innerHTML = html;
+            updateExpandAllButton('bossReportContent', 'bossExpandAllContainer');
             } catch(err) {
                 el.innerHTML = `<p style="color:#aaa;text-align:center;padding:30px">顯示錯誤: ${esc(err.message)}</p>`;
             }
