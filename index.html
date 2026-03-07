@@ -286,20 +286,42 @@
         .month-grid-item.selected { background: var(--primary); color: white; border-color: var(--primary); font-weight: bold; }
 
         .print-report { display: none; }
-        
+        .boss-print-report { display: none; }
+
         @media print {
             body { background: white; padding: 0; color: black; -webkit-print-color-adjust: exact; }
-            .bottom-nav, .input-section, .tools-area, header, .view-toggle, .delete-btn, .month-selector button, .course-filters, #tab-home, #tab-schedule, .card { display: none !important; }
-            .month-selector { display: none !important; } /* Hide selector in print */
-            
-            #tab-list { display: block !important; }
-            #logListContainer { display: none !important; } /* Hide normal list, show print table */
-            
-            .print-report { display: block; font-family: sans-serif; }
+            /* Hide common UI elements */
+            .bottom-nav, .input-section, .tools-area, header, .view-toggle, .delete-btn,
+            .month-selector button, .course-filters, .month-selector, .fab-btn { display: none !important; }
+
+            /* === Coach mode print === */
+            body.print-coach #boss-content { display: none !important; }
+            body.print-coach #app-content { display: block !important; }
+            body.print-coach #tab-home, body.print-coach #tab-schedule { display: none !important; }
+            body.print-coach #tab-list { display: block !important; }
+            body.print-coach #logListContainer { display: none !important; }
+            body.print-coach .card { display: none !important; }
+            body.print-coach .print-report { display: block; font-family: sans-serif; }
+
+            /* === Boss mode print === */
+            body.print-boss #app-content { display: none !important; }
+            body.print-boss #boss-content { display: block !important; }
+            body.print-boss #boss-tab-schedule, body.print-boss #boss-tab-coaches { display: none !important; }
+            body.print-boss #boss-tab-report { display: block !important; }
+            body.print-boss #boss-content header { display: none !important; }
+            body.print-boss #boss-content .bottom-nav { display: none !important; }
+            body.print-boss .card { display: none !important; }
+            body.print-boss #bossReportContent { display: block !important; }
+            body.print-boss #bossReportContent .card { display: block !important; background: white !important; color: black !important; box-shadow: none !important; border: 1px solid #ddd !important; }
+            body.print-boss #bossReportContent .record-card { background: white !important; color: black !important; box-shadow: none !important; border: 1px solid #eee !important; }
+            body.print-boss #bossReportContent .hours-badge { color: black !important; }
+            body.print-boss .boss-print-report { display: block; font-family: sans-serif; }
+
+            /* Print header & layout (shared) */
             .print-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; }
             .print-title { font-size: 24px; font-weight: 900; }
             .print-meta { font-size: 14px; color: #444; text-align: right; }
-            
+
             /* Print Calendar */
             .print-cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-bottom: 20px; border: 1px solid #ddd; page-break-inside: avoid; }
             .p-cal-head { font-size: 10px; text-align: center; background: #eee; padding: 4px; font-weight: bold; }
@@ -312,9 +334,10 @@
             .print-table th { border-bottom: 1px solid #000; text-align: left; padding: 4px; }
             .print-table td { border-bottom: 1px solid #eee; padding: 6px 4px; }
             .print-total { margin-top: 20px; text-align: right; font-weight: bold; font-size: 16px; }
-            #boss-content .bottom-nav, #boss-content header, #boss-tab-schedule, #boss-tab-coaches { display: none !important; }
-            #boss-tab-report { display: block !important; }
-            #boss-content { display: block !important; }
+
+            /* Dark mode print reset */
+            body.dark-mode { background: white !important; color: black !important; --light: #f7f7f7; --dark: #333; --border: #ddd; }
+            body.dark-mode .print-report, body.dark-mode .boss-print-report { color: black !important; }
         }
 
         /* Loading Overlay */
@@ -617,6 +640,7 @@
                     <span id="bossMonthLabel">選擇月份</span>
                 </button>
             </div>
+            <div id="bossPrintReport" class="boss-print-report"></div>
             <div id="bossReportContent"></div>
         </div>
 
@@ -855,11 +879,9 @@
         selectedMonths = [_defM];
 
         function startPrint() {
-            renderLogList(); // Refresh data
-            // Delay to allow DOM update which often fixes print issues on mobile
-            setTimeout(() => {
-                window.print();
-            }, 500);
+            try { renderLogList(); } catch(e) { console.error('renderLogList error:', e); }
+            document.body.classList.add('print-coach');
+            setTimeout(() => { window.print(); }, 500);
         }
 
         let _monthPickerCallback = null;
@@ -1930,8 +1952,86 @@
 
         function startBossPrint() {
             renderBossReport();
+            renderBossPrintView();
+            document.body.classList.add('print-boss');
             setTimeout(() => window.print(), 300);
         }
+
+        function renderBossPrintView() {
+            const pContainer = document.getElementById('bossPrintReport');
+            if (!pContainer) return;
+
+            const filteredLogs = bossLogs.filter(l =>
+                bossSelectedMonths.some(m => (l.date || '').startsWith(m))
+            );
+
+            // Title
+            let titleStr = '';
+            if (bossSelectedMonths.length === 1) {
+                const [y, m] = bossSelectedMonths[0].split('-');
+                titleStr = `${y}年${parseInt(m)}月 工時報表`;
+            } else if (bossSelectedMonths.length > 0) {
+                const sorted = [...bossSelectedMonths].sort();
+                titleStr = `${sorted[0]} 至 ${sorted[sorted.length - 1]} 工時報表 (${bossSelectedMonths.length}個月)`;
+            }
+
+            const totalH = filteredLogs.reduce((s, l) => s + parseFloat(l.hours || 0), 0);
+
+            let html = `
+                <div class="print-header">
+                    <div class="print-title">${esc(titleStr)}</div>
+                    <div class="print-meta">
+                        <div style="font-weight:700;">教練工時總覽</div>
+                        <div style="font-weight:700;">總計: ${totalH.toFixed(2)} hr</div>
+                    </div>
+                </div>`;
+
+            if (filteredLogs.length === 0) {
+                html += '<p style="text-align:center;padding:40px;color:#999;">所選月份沒有記錄</p>';
+                pContainer.innerHTML = html;
+                return;
+            }
+
+            // Group by coach
+            const byCoach = {};
+            filteredLogs.forEach(l => {
+                if (!byCoach[l.uid]) byCoach[l.uid] = [];
+                byCoach[l.uid].push(l);
+            });
+
+            Object.entries(byCoach).forEach(([uid, coachLogs]) => {
+                const coach = allCoaches.find(c => c.uid === uid);
+                const name = coach ? (coach.name || coach.email) : uid;
+                const coachTotal = coachLogs.reduce((s, l) => s + parseFloat(l.hours || 0), 0);
+
+                html += `<div style="margin-top:20px; page-break-inside:avoid;">`;
+                html += `<div style="font-weight:800; font-size:1.1em; border-bottom:1px solid #000; padding-bottom:4px; margin-bottom:8px;">${esc(name)} — ${coachTotal.toFixed(1)} 小時</div>`;
+                html += `<table class="print-table"><thead><tr><th>日期</th><th>時間</th><th>地點</th><th>課程</th><th style="text-align:right">時數</th></tr></thead><tbody>`;
+
+                coachLogs.sort((a, b) => (a.date || '').localeCompare(b.date || '')).forEach(l => {
+                    const dObj = new Date((l.date || '') + 'T00:00:00');
+                    const dayMap = ['日','一','二','三','四','五','六'];
+                    const dateTxt = isNaN(dObj) ? l.date : `${dObj.getMonth()+1}/${dObj.getDate()} (${dayMap[dObj.getDay()]})`;
+                    html += `<tr>
+                        <td>${esc(dateTxt)}</td>
+                        <td>${esc(l.start || '')}-${esc(l.end || '')}</td>
+                        <td>${esc(l.location || '-')}</td>
+                        <td>${esc(l.course || '未命名')}</td>
+                        <td style="text-align:right">${parseFloat(l.hours || 0).toFixed(1)}</td>
+                    </tr>`;
+                });
+
+                html += `</tbody></table></div>`;
+            });
+
+            html += `<div class="print-total">總計: ${totalH.toFixed(2)} 小時</div>`;
+            pContainer.innerHTML = html;
+        }
+
+        // --- Clean up print mode class ---
+        window.addEventListener('afterprint', () => {
+            document.body.classList.remove('print-coach', 'print-boss');
+        });
 
         // --- 離線偵測 ---
         window.addEventListener('offline', () => showToast('目前離線，部分功能可能不可用'));
