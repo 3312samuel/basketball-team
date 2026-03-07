@@ -2715,19 +2715,30 @@
                             </div>`;
                         }).join('');
 
-                    const logRows = courseLogs
-                        .sort((a,b) => (a.date||'').localeCompare(b.date||''))
-                        .map(l => {
-                            const coach = allCoaches.find(c => c.uid === l.uid);
-                            const cName = coach ? (coach.name || coach.email) : l.uid;
-                            return `<div class="record-card">
-                                <div class="record-info">
-                                    <div class="record-title">${esc(cName)}${l.isSub ? ' <span class="sub-tag">代課</span>' : ''}</div>
-                                    <div class="record-meta">${esc(l.date || '')} &nbsp; ${esc(l.start || '')}–${esc(l.end || '')} &nbsp; ${esc(l.location || '')}</div>
-                                </div>
-                                <div class="hours-badge">${parseFloat(l.hours||0).toFixed(1)}h</div>
-                            </div>`;
-                        }).join('');
+                    // Merge same-session coaches (same date+time+location)
+                    const mergeMap = {};
+                    courseLogs.sort((a,b) => (a.date||'').localeCompare(b.date||'')).forEach(l => {
+                        const key = `${l.date}|${l.start}|${l.end}|${l.location}`;
+                        if (!mergeMap[key]) mergeMap[key] = { ...l, coaches: [], totalHours: 0 };
+                        const coach = allCoaches.find(c => c.uid === l.uid);
+                        const cName = coach ? (coach.name || coach.email) : l.uid;
+                        mergeMap[key].coaches.push({ name: cName, isSub: l.isSub });
+                        mergeMap[key].totalHours += parseFloat(l.hours || 0);
+                    });
+                    const logRows = Object.values(mergeMap).map(g => {
+                        const names = g.coaches.map(c => esc(c.name) + (c.isSub ? ' <span class="sub-tag">代課</span>' : '')).join('、');
+                        const perH = parseFloat(g.hours || 0);
+                        const hoursTxt = g.coaches.length > 1
+                            ? `${g.coaches.length} × ${perH.toFixed(1)} = ${g.totalHours.toFixed(1)}h`
+                            : `${perH.toFixed(1)}h`;
+                        return `<div class="record-card">
+                            <div class="record-info">
+                                <div class="record-title">${names}</div>
+                                <div class="record-meta">${esc(g.date || '')} &nbsp; ${esc(g.start || '')}–${esc(g.end || '')} &nbsp; ${esc(g.location || '')}</div>
+                            </div>
+                            <div class="hours-badge">${hoursTxt}</div>
+                        </div>`;
+                    }).join('');
 
                     const sid = 'boss-c-' + ci;
                     html += `
@@ -2902,17 +2913,30 @@
                     html += `<div style="font-weight:800; font-size:1.1em; border-bottom:1px solid #000; padding-bottom:4px; margin-bottom:8px;">${esc(course)} — ${courseTotal.toFixed(1)} 小時 (${courseLogs.length} 堂)</div>`;
                     html += `<table class="print-table"><thead><tr><th>日期</th><th>教練</th><th>時間</th><th>地點</th><th style="text-align:right">時數</th></tr></thead><tbody>`;
 
+                    // Merge same-session coaches (same date+time+location)
+                    const pMergeMap = {};
                     courseLogs.sort((a, b) => (a.date || '').localeCompare(b.date || '')).forEach(l => {
-                        const dObj = new Date((l.date || '') + 'T00:00:00');
-                        const dateTxt = isNaN(dObj) ? l.date : `${dObj.getMonth()+1}/${dObj.getDate()} (${dayMap[dObj.getDay()]})`;
+                        const key = `${l.date}|${l.start}|${l.end}|${l.location}`;
+                        if (!pMergeMap[key]) pMergeMap[key] = { ...l, coaches: [], totalHours: 0 };
                         const coach = allCoaches.find(c => c.uid === l.uid);
                         const cName = coach ? (coach.name || coach.email) : l.uid;
+                        pMergeMap[key].coaches.push({ name: cName, isSub: l.isSub });
+                        pMergeMap[key].totalHours += parseFloat(l.hours || 0);
+                    });
+                    Object.values(pMergeMap).forEach(g => {
+                        const dObj = new Date((g.date || '') + 'T00:00:00');
+                        const dateTxt = isNaN(dObj) ? g.date : `${dObj.getMonth()+1}/${dObj.getDate()} (${dayMap[dObj.getDay()]})`;
+                        const names = g.coaches.map(c => c.name + (c.isSub ? ' (代)' : '')).join('、');
+                        const perH = parseFloat(g.hours || 0);
+                        const hoursTxt = g.coaches.length > 1
+                            ? `${g.coaches.length} × ${perH.toFixed(1)} = ${g.totalHours.toFixed(1)}`
+                            : `${perH.toFixed(1)}`;
                         html += `<tr>
                             <td>${esc(dateTxt)}</td>
-                            <td>${esc(cName)}${l.isSub ? ' (代)' : ''}</td>
-                            <td>${esc(l.start || '')}-${esc(l.end || '')}</td>
-                            <td>${esc(l.location || '-')}</td>
-                            <td style="text-align:right">${parseFloat(l.hours || 0).toFixed(1)}</td>
+                            <td>${esc(names)}</td>
+                            <td>${esc(g.start || '')}-${esc(g.end || '')}</td>
+                            <td>${esc(g.location || '-')}</td>
+                            <td style="text-align:right">${hoursTxt}</td>
                         </tr>`;
                     });
                     html += `</tbody></table></div>`;
